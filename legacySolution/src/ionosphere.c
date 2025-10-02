@@ -1,0 +1,406 @@
+/* Test Program for Multigrid Solution of Ionsphere Model */
+
+#include "IONOSPHERE.h"
+#include "IONOSPHERE_util.h"
+
+/* Begin IONOSPHERE program. */
+
+int main()
+{
+        /* Input/output file pointer declarations. */
+
+        FILE *input_file;
+        FILE *output_file;
+        char file_name[81], buffer[81], symbol;
+	char buffer2[81], symbol2;
+
+        /* Variable declarations. */
+       
+        int i, j, iout, ireinit;
+        int nnodes, nhemi, nmag, ntrimag;
+	int **InMagTri, *MagTriNode1, *MagTriNode2, *MagTriNode3; 
+        double **PHI, **JR,
+               **Theta, **Psi,
+               **X, **Y, **Z,
+               **Sigma0, **SigmaH, **SigmaP,
+               **SigmaThTh, **SigmaThPs, **SigmaPsPs,
+               **dSigmaThTh_dTheta, **dSigmaThPs_dTheta, **dSigmaPsPs_dTheta,
+               **dSigmaThTh_dPsi, **dSigmaThPs_dPsi, **dSigmaPsPs_dPsi;
+	double **ETh, **EPs, **Ex, **Ey, **Ez, **Jx, **Jy, **Jz,
+               **Bx, **By, **Bz, **Ux, **Uy, **Uz;
+        double *Thetamag, *Psimag,
+               *Xmag, *Ymag, *Zmag,
+               *Umag_x, *Umag_y, *Umag_z,
+               *Bmag_x, *Bmag_y, *Bmag_z,
+               *Jmag_x, *Jmag_y, *Jmag_z,
+               *Jmag_R;
+        double Radius,rho,p,B1x,B1y,B1z,
+               q,Jll,fhem;
+
+        /* Give program title. */
+
+        printf("\nIONOSPHERE: Potential Model of Planetary Ionospheric Currents.\n");
+        printf("Clinton P.T. Groth, U. Mich. SPRL, November 1996.\n");
+
+        /* Read magnetospheric current system from input file. */
+
+        printf("\n Reading MAUSMHD magnetosphere data.......");
+	IONOSPHERE_copy("body.dat", file_name);
+	/* IONOSPHERE_copy("tplot44.dat", file_name); */
+        input_file = fopen(file_name, "r");
+        for (i = 1; i <= 22; ++i)
+            fscanf(input_file, "%[^\n]\n", buffer);
+        fscanf(input_file, "%[^=] %1c %d %[^=] %1c %d",
+	       buffer, &symbol, &nmag,
+	       buffer2, &symbol2, &ntrimag);
+        fscanf(input_file, "%[^\n]\n", buffer);
+
+	Thetamag=IONOSPHERE_dvector(1,nmag);
+        Psimag=IONOSPHERE_dvector(1,nmag);
+        Xmag=IONOSPHERE_dvector(1,nmag);
+        Ymag=IONOSPHERE_dvector(1,nmag);
+        Zmag=IONOSPHERE_dvector(1,nmag);
+        Umag_x=IONOSPHERE_dvector(1,nmag);
+        Umag_y=IONOSPHERE_dvector(1,nmag);
+        Umag_z=IONOSPHERE_dvector(1,nmag);
+        Bmag_x=IONOSPHERE_dvector(1,nmag);
+        Bmag_y=IONOSPHERE_dvector(1,nmag);
+        Bmag_z=IONOSPHERE_dvector(1,nmag);
+        Jmag_x=IONOSPHERE_dvector(1,nmag);
+        Jmag_y=IONOSPHERE_dvector(1,nmag);
+        Jmag_z=IONOSPHERE_dvector(1,nmag);
+        Jmag_R=IONOSPHERE_dvector(1,nmag);
+
+        for (i = 1; i <= nmag; ++i) {
+          fscanf(input_file,
+                 "%lg %lg %lg %lg %lg %lg %lg %lg %lg %lg %lg %lg %lg %lg %lg %lg %lg %lg %lg %lg",
+                 &Xmag[i], &Ymag[i], &Zmag[i],
+                 &Radius, &rho,
+		 &Umag_x[i], &Umag_y[i], &Umag_z[i],
+		 &p, &B1x, &B1y, &B1z,
+		 &Bmag_x[i], &Bmag_y[i], &Bmag_z[i], &q,
+                 &Jmag_x[i], &Jmag_y[i], &Jmag_z[i],
+                 &Jll);
+          /* fscanf(input_file,
+                 "%lg %lg %lg %lg %lg %lg %lg %lg %lg",
+                 &Xmag[i], &Ymag[i], &Zmag[i],
+		 &Bmag_x[i], &Bmag_y[i], &Bmag_z[i],
+                 &Jmag_x[i], &Jmag_y[i], &Jmag_z[i]); */
+        } /* endfor */
+
+	MagTriNode1=IONOSPHERE_ivector(1,ntrimag);
+	MagTriNode2=IONOSPHERE_ivector(1,ntrimag);
+	MagTriNode3=IONOSPHERE_ivector(1,ntrimag);
+
+        for (i = 1; i <= ntrimag; ++i) {
+          fscanf(input_file,"%d %d %d",
+                 &MagTriNode1[i], &MagTriNode2[i], &MagTriNode3[i]);
+        } /* endfor */
+        fclose(input_file);
+
+        /* Apply appropriate dimensionalization to magnetospheric
+           solution quantities. */
+
+       ireinit = 1;
+       IONOSPHERE_magdim(Thetamag, Psimag,
+                         Xmag, Ymag, Zmag, 
+                         Jmag_x, Jmag_y, Jmag_z, Jmag_R,
+                         Bmag_x, Bmag_y, Bmag_z,
+                         nmag, MagTriNode1, MagTriNode2,
+		         MagTriNode3, ntrimag, ireinit);
+
+        /* Allocate storage space for potential solution PHI of
+           the Poisson equation, the source term JR (radial current), and
+           the spherical and Cartesian coordinates theta, phi, x, y, and
+           z. */
+
+        nnodes = 2*(IONOSPHERE_numberofnodes-1)+1;
+        fhem=1.00;
+        PHI=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        JR=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        ETh=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        EPs=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        Ex=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        Ey=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        Ez=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        Jx=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        Jy=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        Jz=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        Bx=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        By=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        Bz=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        Ux=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        Uy=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        Uz=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        Theta=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        Psi=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        X=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        Y=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        Z=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+
+        Sigma0=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        SigmaH=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        SigmaP=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        SigmaThTh=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        SigmaThPs=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        SigmaPsPs=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        dSigmaThTh_dTheta=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        dSigmaThPs_dTheta=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        dSigmaPsPs_dTheta=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        dSigmaThTh_dPsi=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        dSigmaThPs_dPsi=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        dSigmaPsPs_dPsi=IONOSPHERE_dmatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+
+        /* Create a uniform fine mesh in the spherical
+           coordinate system for the upper hemisphere. */
+
+        printf("\n Creating uniform ionosphere mesh.......");
+        Radius = IONOSPHERE_Radius_Earth + IONOSPHERE_Height_Earth;
+        IONOSPHERE_fgrid(Theta, Psi, X, Y, Z,
+                         Radius, IONOSPHERE_numberofnodes, nnodes, fhem);
+
+        /* Evaluate the ionospheric field-aligned current (FAC) sources
+           and initialize the potential solution PHI. */
+
+        printf("\n Computing MAUSMHD field-aligned current.......");
+	ireinit = 1;
+        InMagTri=IONOSPHERE_imatrix(1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_magfac(JR, Theta, Psi, X, Y, Z, Radius,
+                          IONOSPHERE_numberofnodes, nnodes,
+			  Jmag_x, Jmag_y, Jmag_z,
+                          Jmag_R, Thetamag, Psimag,
+                          Xmag, Ymag, Zmag, nmag,
+			  InMagTri, MagTriNode1, MagTriNode2,
+			  MagTriNode3, ntrimag, ireinit);
+
+        for (i = 1; i <= IONOSPHERE_numberofnodes; i++) {
+          for (j = 1; j <= nnodes; j++) {
+	    PHI[i][j]=JR[i][j];
+          } /* endfor */
+        } /* endfor */
+
+	/* Determine the magnetic field components in the
+           ionospheric coordinate system. */
+
+        printf("\n Computing MAUSMHD magnetic field components.......");
+	ireinit = 0;
+        IONOSPHERE_magbfield(Bx, By, Bz, Theta, Psi, X, Y, Z, Radius,
+                             IONOSPHERE_numberofnodes, nnodes,
+                             Bmag_x, Bmag_y, Bmag_z,
+                             Thetamag, Psimag,
+                             Xmag, Ymag, Zmag, nmag,
+		             InMagTri, MagTriNode1, MagTriNode2,
+		             MagTriNode3, ntrimag, ireinit);
+
+        /* Determine the height integrated values of the
+           field-aligned and Hall and Pedersen conductivities
+	   (i.e., conductances). */
+
+        printf("\n Computing height-integrated conductivities.......");
+        IONOSPHERE_conductance(Sigma0, SigmaH, SigmaP,
+                               SigmaThTh, SigmaThPs, SigmaPsPs,
+                               dSigmaThTh_dTheta, dSigmaThPs_dTheta, dSigmaPsPs_dTheta,
+                               dSigmaThTh_dPsi, dSigmaThPs_dPsi, dSigmaPsPs_dPsi,
+                               PHI, Theta, Psi, Radius,  
+                               IONOSPHERE_numberofnodes, nnodes);
+
+        /* Solve the linear elliptic PDE for the potential
+           defined on the sphere using a multigrid
+           Gauss-Seidel solver. */
+
+        printf("\n Solving for ionospheric electric potential.......");
+	IONOSPHERE_multigrid(PHI, Sigma0, SigmaH, SigmaP,
+                             SigmaThTh, SigmaThPs, SigmaPsPs,
+                             dSigmaThTh_dTheta, dSigmaThPs_dTheta, dSigmaPsPs_dTheta,
+                             dSigmaThTh_dPsi, dSigmaThPs_dPsi, dSigmaPsPs_dPsi,
+                             Theta, Psi, Radius,
+                             IONOSPHERE_numberofnodes, nnodes, 4);
+
+	/* Determine the ionospheric electric field and current
+	   systems using the computed electric potential solution. */
+
+        printf("\n Computing ionospheric electric field and current systems.......");
+        IONOSPHERE_current(ETh, EPs, Ex, Ey, Ez, Jx, Jy, Jz,
+                           Ux, Uy, Uz,
+                           PHI, SigmaThTh, SigmaThPs, SigmaPsPs,
+                           Bx, By, Bz,
+                           Theta, Psi, X, Y, Z, Radius,  
+                           IONOSPHERE_numberofnodes, nnodes);
+
+	/* Determine the ionospheric convection velocities at
+	   the locations required for the magnetosphere calculation. */
+
+        printf("\n Determining ionospheric convective velocities.......");
+        IONOSPHERE_magvel(PHI, Ux, Uy, Uz,
+			  Theta, Psi, X, Y, Z, Radius,
+                          IONOSPHERE_numberofnodes, nnodes,
+			  Umag_x, Umag_y, Umag_z,
+                          Thetamag, Psimag,
+                          Xmag, Ymag, Zmag, nmag,
+			  InMagTri, MagTriNode1, MagTriNode2,
+			  MagTriNode3, ntrimag);
+
+        /* Save ionospheric potential solution in a TECPLOT
+           output data file for subsequent plotting . */
+       
+        printf("\n Generate Tecplot output file.......");
+        iout=1;
+        nhemi = (IONOSPHERE_numberofnodes-1)/2 + 1;
+        if (iout==1) {
+          IONOSPHERE_copy("ionosphere.dat", file_name);
+          output_file = fopen(file_name, "w");
+          fprintf(output_file, "TITLE=\"Ionospheric Potential\"\n");
+          fprintf(output_file, "VARIABLES= \"x\"     \\\n");
+          fprintf(output_file, "\"y\"     \\\n");
+          fprintf(output_file, "\"z\"     \\\n");
+          fprintf(output_file, "\"Theta\"     \\\n");
+          fprintf(output_file, "\"Psi\"     \\\n");
+          fprintf(output_file, "\"SigmaH\"     \\\n");
+          fprintf(output_file, "\"SigmaP\"     \\\n");
+          fprintf(output_file, "\"JR\"     \\\n");
+          fprintf(output_file, "\"PHI\"     \\\n");
+          fprintf(output_file, "\"Ex\"     \\\n");
+          fprintf(output_file, "\"Ey\"     \\\n");
+          fprintf(output_file, "\"Ez\"     \\\n");
+          fprintf(output_file, "\"Jx\"     \\\n");
+          fprintf(output_file, "\"Jy\"     \\\n");
+          fprintf(output_file, "\"Jz\"     \\\n");
+          fprintf(output_file, "\"Ux\"     \\\n");
+          fprintf(output_file, "\"Uy\"     \\\n");
+          fprintf(output_file, "\"Uz\"     \n");
+          fprintf(output_file, "ZONE T=\"Northern Hemisphere\" \\\n");
+          fprintf(output_file, "I= %d \\\n", nhemi);
+          fprintf(output_file, "J= %d \\\n", nnodes);
+          fprintf(output_file, "F=POINT \n");
+          for (j = 1; j <= nnodes; j++) {
+            for (i=1; i <= nhemi; i++) {
+              fprintf(output_file,
+                      " %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n",
+                      (Radius/IONOSPHERE_Radius_Earth)*X[i][j],
+                      (Radius/IONOSPHERE_Radius_Earth)*Y[i][j],
+                      (Radius/IONOSPHERE_Radius_Earth)*Z[i][j],
+                      Theta[i][j],Psi[i][j],
+                      SigmaH[i][j],SigmaP[i][j],
+                      1.0e06*JR[i][j],1.0e-03*PHI[i][j],
+		      Ex[i][j],Ey[i][j],Ez[i][j],
+		      1.0e06*Jx[i][j],1.0e06*Jy[i][j],1.0e06*Jz[i][j],
+		      1.0e-03*Ux[i][j],1.0e-03*Uy[i][j],1.0e-03*Uz[i][j]);
+            } /* endfor */
+          } /* endfor */
+          fprintf(output_file, "ZONE T=\"Southern Hemisphere\" \\\n");
+          fprintf(output_file, "I= %d \\\n", nhemi);
+          fprintf(output_file, "J= %d \\\n", nnodes);
+          fprintf(output_file, "F=POINT \n");
+          for (j = 1; j <= nnodes; j++) {
+            for (i = nhemi; i <= IONOSPHERE_numberofnodes; i++) {
+              fprintf(output_file,
+                      " %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n",
+                      (Radius/IONOSPHERE_Radius_Earth)*X[i][j],
+                      (Radius/IONOSPHERE_Radius_Earth)*Y[i][j],
+                      (Radius/IONOSPHERE_Radius_Earth)*Z[i][j],
+                      Theta[i][j],Psi[i][j],
+                      SigmaH[i][j],SigmaP[i][j],
+                      1.0e06*JR[i][j],1.0e-03*PHI[i][j],
+		      Ex[i][j],Ey[i][j],Ez[i][j],
+		      1.0e06*Jx[i][j],1.0e06*Jy[i][j],1.0e06*Jz[i][j],
+		      1.0e-03*Ux[i][j],1.0e-03*Uy[i][j],1.0e-03*Uz[i][j]);
+            } /* endfor */
+          } /* endfor */
+          fclose(output_file);
+        } else {
+          IONOSPHERE_copy("ionosphere.dat", file_name);
+          output_file = fopen(file_name, "w");
+          fprintf(output_file,
+                  "# Ionospheric Potential \n");
+          fprintf(output_file,
+                  "# Theta, Psi, x, y, z, SigmaH, SigmaP, JR, PHI, Ex, Ey, Ez, Jx, Jy, Jz, Ux, Uy, Uz \n");
+          for (j = 1; j <= nnodes; j++) {
+            for (i=1; i <= nhemi; i++) {
+              fprintf(output_file,
+                      " %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n",
+                      Theta[i][j],Psi[i][j],
+                      (Radius/IONOSPHERE_Radius_Earth)*X[i][j],
+                      (Radius/IONOSPHERE_Radius_Earth)*Y[i][j],
+                      (Radius/IONOSPHERE_Radius_Earth)*Z[i][j],
+                      SigmaH[i][j],SigmaP[i][j],
+                      1.0e06*JR[i][j],1.0e-03*PHI[i][j],
+		      Ex[i][j],Ey[i][j],Ez[i][j],
+                      1.0e06*Jx[i][j],1.0e06*Jy[i][j],1.0e06*Jz[i][j],
+		      1.0e-03*Ux[i][j],1.0e-03*Uy[i][j],1.0e-03*Uz[i][j]);
+            } /* endfor */
+            fprintf(output_file, "\n");
+          } /* endfor */
+          fclose(output_file);
+        } /* endif */
+       
+        /* De-allocate storage space. */
+ 
+        IONOSPHERE_free_dmatrix(PHI,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(JR,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(ETh,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(EPs,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(Ex,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(Ey,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(Ez,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(Jx,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(Jy,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(Jz,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(Bx,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(By,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(Bz,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(Ux,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(Uy,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(Uz,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(Theta,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(Psi,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(X,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(Y,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(Z,1,IONOSPHERE_numberofnodes,1,nnodes);
+
+        IONOSPHERE_free_dmatrix(Sigma0,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(SigmaH,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(SigmaP,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(SigmaThTh,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(SigmaThPs,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(SigmaPsPs,1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(dSigmaThTh_dTheta,
+                                1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(dSigmaThPs_dTheta,
+                                1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(dSigmaPsPs_dTheta,
+                                1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(dSigmaThTh_dPsi,
+                                1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(dSigmaThPs_dPsi,
+                                1,IONOSPHERE_numberofnodes,1,nnodes);
+        IONOSPHERE_free_dmatrix(dSigmaPsPs_dPsi,
+                                1,IONOSPHERE_numberofnodes,1,nnodes);
+
+        IONOSPHERE_free_dvector(Thetamag,1,nmag);
+        IONOSPHERE_free_dvector(Psimag,1,nmag);
+        IONOSPHERE_free_dvector(Xmag,1,nmag);
+        IONOSPHERE_free_dvector(Ymag,1,nmag);
+        IONOSPHERE_free_dvector(Zmag,1,nmag);
+        IONOSPHERE_free_dvector(Umag_x,1,nmag);
+        IONOSPHERE_free_dvector(Umag_y,1,nmag);
+        IONOSPHERE_free_dvector(Umag_z,1,nmag);
+        IONOSPHERE_free_dvector(Bmag_x,1,nmag);
+        IONOSPHERE_free_dvector(Bmag_y,1,nmag);
+        IONOSPHERE_free_dvector(Bmag_z,1,nmag);
+        IONOSPHERE_free_dvector(Jmag_x,1,nmag);
+        IONOSPHERE_free_dvector(Jmag_y,1,nmag);
+        IONOSPHERE_free_dvector(Jmag_z,1,nmag);
+        IONOSPHERE_free_dvector(Jmag_R,1,nmag);
+
+	IONOSPHERE_free_ivector(MagTriNode1,1,ntrimag);
+	IONOSPHERE_free_ivector(MagTriNode2,1,ntrimag);
+	IONOSPHERE_free_ivector(MagTriNode3,1,ntrimag);
+
+        IONOSPHERE_free_imatrix(InMagTri,1,IONOSPHERE_numberofnodes,1,nnodes);
+
+        /* End IONOSPHERE program. */
+
+        printf("\n\nIONOSPHERE: Execution complete.\n");
+
+        return 0;
+}

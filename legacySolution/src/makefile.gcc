@@ -1,0 +1,186 @@
+#
+# Makefile for mglin & mgfas: Linear and Full Approximation Storage (FAS)
+#                             Full Multigrid Solvers.
+# also
+# Makefile for 2D Ionospheric Electric Potential Model.
+#
+# OS/2 PM - gnu cc compiler Version 1.3
+#
+SOURCEDIR = e:\clint\Ionosphere\src
+OBJ1 = mglin.obj
+OBJ2 = mgfas.obj
+OBJ3 = ionosphere.obj
+IONOBJ = IONOSPHERE_conductance.obj IONOSPHERE_multigrid.obj \
+         IONOSPHERE_fgrid.obj IONOSPHERE_cgrid.obj \
+         IONOSPHERE_restrict.obj IONOSPHERE_prolong.obj \
+         IONOSPHERE_smoother.obj IONOSPHERE_residual.obj \
+         IONOSPHERE_update.obj IONOSPHERE_matcopy.obj \
+         IONOSPHERE_matzero.obj IONOSPHERE_util.obj \
+         IONOSPHERE_magdim.obj IONOSPHERE_magfac.obj \
+         IONOSPHERE_magbfield.obj IONOSPHERE_magvel.obj IONOSPHERE_current.obj
+CPTGOBJ = CPTG_util.obj
+NROBJ = NR_mglin.obj NR_mgfas.obj \
+        NR_addint.obj NR_interp.obj NR_lop.obj NR_relax.obj NR_relax2.obj \
+        NR_resid.obj NR_rstrct.obj NR_slvsml.obj NR_slvsm2.obj \
+        NR_copy.obj NR_matadd.obj NR_matsub.obj NR_fill0.obj NR_anorm2.obj \
+        NR_util.obj
+IONINC = IONOSPHERE.h IONOSPHERE_util.h
+CPTGINC = CPTG_util.h
+NRINC = NR.h NR_util.h
+LIBCC =
+EXE1 = mglin.exe
+EXE2 = mgfas.exe
+EXE3 = ionosphere.exe
+GCC = gcc
+CPU =
+OPT = -O
+DEBUG =
+GLINK = gcc
+GLIB = glib
+RC = rc
+#
+# Define the dependencies for the three main programs.
+#
+all : $(EXE1) $(EXE2) $(EXE3)
+	@echo Programs MGLIN, MGFAS, and IONOSPHERE have been brought up to date.
+
+mglin : $(EXE1)
+	@echo Program MGLIN has been brought up to date.
+
+mgfas : $(EXE2)
+	@echo Program MGFAS has been brought up to date.
+
+ionosphere : $(EXE3)
+	@echo Program IONOSPHERE has been brought up to date.
+#
+# Define the dependencies for the three main executables.
+#
+$(EXE1) : $(OBJ1) $(NROBJ)
+	$(GLINK) -o $(EXE1) $(OBJ1) $(NROBJ) $(DEF1) $(LIBCC)
+
+$(EXE2) : $(OBJ2) $(NROBJ)
+	$(GLINK) -o $(EXE2) $(OBJ2) $(NROBJ) $(DEF2) $(LIBCC)
+
+$(EXE3) : $(OBJ3) $(IONOBJ) 
+	$(GLINK) -o $(EXE3) $(OBJ3) $(IONOBJ) $(DEF3) $(LIBCC)
+#
+# Define the dependencies for each object.
+#
+mglin.obj : mglin.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) mglin.c
+
+mgfas.obj : mgfas.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) mgfas.c
+
+ionosphere.obj : ionosphere.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) ionosphere.c
+
+IONOSPHERE_conductance.obj : IONOSPHERE_conductance.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_conductance.c
+
+IONOSPHERE_multigrid.obj : IONOSPHERE_multigrid.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_multigrid.c
+
+IONOSPHERE_fgrid.obj : IONOSPHERE_fgrid.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_fgrid.c
+
+IONOSPHERE_cgrid.obj : IONOSPHERE_cgrid.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_cgrid.c
+
+IONOSPHERE_restrict.obj : IONOSPHERE_restrict.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_restrict.c
+
+IONOSPHERE_prolong.obj : IONOSPHERE_prolong.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_prolong.c
+
+IONOSPHERE_smoother.obj : IONOSPHERE_smoother.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_smoother.c
+
+IONOSPHERE_residual.obj : IONOSPHERE_residual.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_residual.c
+
+IONOSPHERE_update.obj : IONOSPHERE_update.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_update.c
+
+IONOSPHERE_matcopy.obj : IONOSPHERE_matcopy.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_matcopy.c
+
+IONOSPHERE_matzero.obj : IONOSPHERE_matzero.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_matzero.c
+
+IONOSPHERE_util.obj : IONOSPHERE_util.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_util.c
+
+IONOSPHERE_magdim.obj : IONOSPHERE_magdim.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_magdim.c
+
+IONOSPHERE_magfac.obj : IONOSPHERE_magfac.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_magfac.c
+
+IONOSPHERE_magbfield.obj : IONOSPHERE_magbfield.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_magbfield.c
+
+IONOSPHERE_magvel.obj : IONOSPHERE_magvel.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_magvel.c
+
+IONOSPHERE_current.obj : IONOSPHERE_current.c $(IONINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) IONOSPHERE_current.c
+
+CPTG_util.obj : CPTG_util.c $(CPTGINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) CPTG_util.c
+
+NR_mglin.obj : NR_mglin.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_mglin.c
+
+NR_mgfas.obj : NR_mgfas.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_mgfas.c
+
+NR_addint.obj : NR_addint.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_addint.c
+
+NR_interp.obj : NR_interp.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_interp.c
+
+NR_lop.obj : NR_lop.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_lop.c
+
+NR_relax.obj : NR_relax.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_relax.c
+
+NR_relax2.obj : NR_relax2.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_relax2.c
+
+NR_resid.obj : NR_resid.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_resid.c
+
+NR_rstrct.obj : NR_rstrct.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_rstrct.c
+
+NR_slvsml.obj : NR_slvsml.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_slvsml.c
+
+NR_slvsm2.obj : NR_slvsm2.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_slvsm2.c
+
+NR_copy.obj : NR_copy.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_copy.c
+
+NR_matadd.obj : NR_matadd.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_matadd.c
+
+NR_matsub.obj : NR_matsub.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_matsub.c
+
+NR_fill0.obj : NR_fill0.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_fill0.c
+
+NR_anorm2.obj : NR_anorm2.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_anorm2.c
+
+NR_util.obj : NR_util.c $(NRINC)
+	$(CC) -c $(CPU) $(OPT) $(DEBUG) NR_util.c
+#
+# Cleanup the multigrid solver home directory.
+#
+cleanup:
+	del *.obj *.map
