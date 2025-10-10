@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import glob
 
 # Find all .dat files
-files = glob.glob("result_*.dat")
+files = glob.glob("*.dat")
 
 for f in files:
     x, u = [], []
