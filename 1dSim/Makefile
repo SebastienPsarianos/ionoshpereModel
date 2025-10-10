@@ -1,5 +1,5 @@
 CC = g++
-TARGET = solver
+TARGET = solver.out
 OPTIONS = -std=c++17 -Wall
 
 $(TARGET): main.cpp
