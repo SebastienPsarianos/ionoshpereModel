@@ -149,11 +149,11 @@ private:
 };
 
 int main(int argc, char* argv[]) {
-    constexpr int GRID_SIZE = 400;
-    constexpr double X0 = 0.0;
-    constexpr double XMAX = 1.0;
-    constexpr double U_X0 = 0.0;
-    constexpr double U_XMAX = 1.0;
+    int GRID_SIZE = 400;
+    double X0 = 0.0;
+    double XMAX = 1.0;
+    double U_X0 = 0.0;
+    double U_XMAX = 1.0;
 
     Solver s1(GRID_SIZE, X0, XMAX, U_X0, U_XMAX, CONSTANT);
     s1.solve(GAUSS_SEIDEL);
