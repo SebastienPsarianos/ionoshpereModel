@@ -6,10 +6,7 @@
 #include <vector>
 #include <array>
 #include <functional>
-
-
 #include <fstream>
-#include <sstream>
 
 #define MAX_ITERATION_NUM 10000000
 #define RES_THRESHOLD  0.01
