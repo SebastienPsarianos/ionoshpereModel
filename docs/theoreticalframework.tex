@@ -1,0 +1,155 @@
+\documentclass{article}
+\usepackage{graphicx} \usepackage{physics}
+\usepackage{amsmath}
+
+\title{Research Project First draft}
+\author{sebastien } \date{October 2025}
+
+\begin{document}
+
+
+
+The initial equation given by the goodman paper is as follows:
+\begin{equation*}
+	\begin{aligned}
+		j_R
+		 & = \frac1{R_e^2} \Bigg[
+			\left( \Sigma_{\theta\theta} - \frac{\Sigma_{\theta R} \tan\theta}{2} \right)
+		\pdv[2]{\psi}{\theta}                                                         \\[6pt]
+		 & \quad + \frac1{\sin\theta}
+		\left( \Sigma_{\theta\phi} + \Sigma_{\phi\theta} - \frac{\Sigma_{\phi R} \tan\theta}{2} \right)
+		\pdv{\psi}{\phi}{\theta}                                                      \\[6pt]
+		 & \quad + \frac{\Sigma_{\phi\phi}}{\sin^2\theta}
+		\pdv[2]{\psi}{\phi} + \Bigg\{ \pdv{\theta}
+		\left( \Sigma_{\theta\theta} - \frac{\Sigma_{\theta R} \tan\theta}{2} \right) \\[6pt]
+		 & \quad + \cot\theta
+		\left( \Sigma_{\theta\theta} - \frac{\Sigma_{\theta R} \tan\theta}{2} \right) \\[6pt]
+		 & \quad + \frac1{\sin\theta} \pdv{\phi}
+		\left( \Sigma_{\phi\theta} - \frac{\Sigma_{\phi R} \tan\theta}{2} \right)
+		\Bigg\}\pdv{\psi}{\theta}                                                     \\[6pt]
+		 & \quad + \Bigg\{\pdv{\theta}
+		\left( \frac{\Sigma_{\theta\phi}}{\sin\theta} \right) +
+		\frac1{\sin^2\theta}\pdv{\Sigma_{\phi\phi}}{\phi}
+		+ \frac{\Sigma_{\theta\phi}\cot\theta}{\sin\theta}
+		\Bigg\}\pdv{\psi}{\phi}
+		\Bigg]_{R = R_e}
+	\end{aligned}
+\end{equation*}
+By moving the $R_E^2$ term to the left side and then multiplying both sides by $\sin^2\theta$, we arrive at:
+\begin{equation*}
+	\begin{aligned}
+		\sin^2\theta \cdot R_e^2j_R
+		 & =  \Bigg[
+			\sin^2 \theta \cdot \left( \Sigma_{\theta\theta} - \frac{\Sigma_{\theta R} \tan\theta}{2} \right)
+		\pdv[2]{\psi}{\theta}                                                         \\[6pt]
+		 & \quad + \sin\theta
+		\left( \Sigma_{\theta\phi} + \Sigma_{\phi\theta} - \frac{\Sigma_{\phi R} \tan\theta}{2} \right)
+		\pdv{\psi}{\phi}{\theta}                                                      \\[6pt]
+		 & \quad + \Sigma_{\phi\phi}
+		\pdv[2]{\psi}{\phi} + \Bigg\{
+		\sin^2\theta\cdot \pdv{\theta}
+		\left( \Sigma_{\theta\theta} - \frac{\Sigma_{\theta R} \tan\theta}{2} \right) \\[6pt]
+		 & \quad + \sin \theta\cos\theta
+		\left( \Sigma_{\theta\theta} - \frac{\Sigma_{\theta R} \tan\theta}{2} \right) \\[6pt]
+		 & \quad + \sin\theta\cdot
+		\pdv{\phi}
+		\left( \Sigma_{\phi\theta} - \frac{\Sigma_{\phi R} \tan\theta}{2} \right)
+		\Bigg\}\pdv{\psi}{\theta}                                                     \\[6pt]
+		 & \quad + \Bigg\{\sin^2\theta\cdot\pdv{\theta}
+		\left( \frac{\Sigma_{\theta\phi}}{\sin\theta} \right) +
+		\pdv{\Sigma_{\phi\phi}}{\phi}
+		+ \Sigma_{\theta\phi}\cdot\cos\theta
+		\Bigg\}\pdv{\psi}{\phi}
+		\Bigg]_{R = R_e}
+	\end{aligned}
+\end{equation*}
+As given by the comment on the paper by O.Amm, the conductance tensor is:
+\begin{equation*}
+	\Sigma_{(R, \theta,\phi)} = \left(\begin{matrix}
+			0 & 0                                         & 0                                                \\
+			0 & \frac{\Sigma_0\Sigma_P}{C}                & \frac{\Sigma_0\Sigma_H(-\cos\varepsilon)}{C}     \\
+			0 & \frac{\Sigma_0\Sigma_H\cos\varepsilon}{C} & \Sigma_P + \frac{\Sigma_H^2\sin^2\varepsilon}{C}
+		\end{matrix}\right)
+\end{equation*}
+From this, it is clear that $\Sigma_{\theta\phi} = -\Sigma_{\phi\theta}$ and $\Sigma_{\theta R} = \Sigma_{\phi R} = 0$. We can therefore, make subsitutions $\Sigma_{\psi\theta} = -\Sigma_{\theta\psi}$ on lines 2 and 6:
+\begin{equation*}
+	\begin{aligned}
+		\sin^2\theta \cdot R_e^2j_R
+		 & =  \Bigg[
+			\sin^2 \theta \cdot \left( \Sigma_{\theta\theta} - \frac{\Sigma_{\theta R} \tan\theta}{2} \right)
+		\pdv[2]{\psi}{\theta}                                                         \\[6pt]
+		 & \quad + \sin\theta
+		\left( \frac{\Sigma_{\phi R} \tan\theta}{2} \right)
+		\pdv{\psi}{\phi}{\theta}                                                      \\[6pt]
+		 & \quad + \Sigma_{\phi\phi}
+		\pdv[2]{\psi}{\phi} + \Bigg\{
+		\sin^2\theta\cdot \pdv{\theta}
+		\left( \Sigma_{\theta\theta} - \frac{\Sigma_{\theta R} \tan\theta}{2} \right) \\[6pt]
+		 & \quad + \sin \theta\cos\theta
+		\left( \Sigma_{\theta\theta} - \frac{\Sigma_{\theta R} \tan\theta}{2} \right) \\[6pt]
+		 & \quad + \sin\theta\cdot
+		\pdv{\phi}
+		\left( -\Sigma_{\theta\phi} - \frac{\Sigma_{\phi R} \tan\theta}{2} \right)
+		\Bigg\}\pdv{\psi}{\theta}                                                     \\[6pt]
+		 & \quad + \Bigg\{\sin^2\theta\cdot\pdv{\theta}
+		\left( \frac{\Sigma_{\theta\phi}}{\sin\theta} \right) +
+		\pdv{\Sigma_{\phi\phi}}{\phi}
+		+ \Sigma_{\theta\phi}\cdot\cos\theta
+		\Bigg\}\pdv{\psi}{\phi}
+		\Bigg]_{R = R_e}
+	\end{aligned}
+\end{equation*}
+
+Additionally, we can remove all terms with a $\Sigma_{\psi R}$ or $\Sigma_{\theta R}$:
+\begin{equation*}
+	\begin{aligned}
+		\sin^2\theta \cdot R_e^2j_R
+		 & =  \Bigg[
+			\sin^2 \theta \cdot  \Sigma_{\theta\theta}
+		\pdv[2]{\psi}{\theta}                                                     \\[6pt]
+		 & \quad + \Sigma_{\phi\phi}
+		\pdv[2]{\psi}{\phi}                                                       \\[6pt]
+		 & \quad + \Bigg\{
+		\sin^2\theta\cdot \pdv{\Sigma_{\theta\theta}}{\theta}
+		+ \sin \theta\cos\theta\cdot \Sigma_{\theta\theta}
+		- \sin\theta\cdot\pdv{\Sigma_{\theta\phi}}{\phi}\Bigg\}\pdv{\psi}{\theta} \\[6pt]
+		 & \quad + \Bigg\{\sin^2\theta\cdot\pdv{\theta}
+		\left( \frac{\Sigma_{\theta\phi}}{\sin\theta} \right) +
+		\pdv{\Sigma_{\phi\phi}}{\phi}
+		+ \Sigma_{\theta\phi}\cdot\cos\theta
+		\Bigg\}\pdv{\psi}{\phi}
+		\Bigg]_{R = R_e}
+	\end{aligned}
+\end{equation*}
+The $\sin^2 \theta \cdot \pdv\theta \left(\frac{\Sigma_{\theta\phi}}{\sin\theta}\right)$
+term in the first $\phi$ derivative coefficient can be expanded with the quotient rule, giving:
+\begin{equation*}
+	\begin{aligned}
+		\sin^2 \theta \cdot \pdv\theta \left(\frac{\Sigma_{\theta\phi}}{\sin\theta}\right)
+		 & =
+		\sin^2\theta \cdot\frac{\sin\theta\partial_\theta\Sigma_{\theta\phi} - \Sigma_{\theta\phi}\cos\theta}{\sin^2\theta} \\
+		 & = \sin\theta\cdot\pdv{\Sigma_{\theta\phi}}{\theta} - \Sigma_{\theta\phi}\cdot \cos\theta                         \\
+	\end{aligned}
+\end{equation*}
+This cancels out the other term of $\Sigma_{\theta\phi}\cdot \cos\theta$ in the same coefficient. Separating out the coefficients, we arrive at the following expression for the original equation:
+
+\begin{equation*}
+	\sin^2\theta R_E^2 j_r = \kappa_{\theta\theta}\pdv[2]{\psi}{\theta} +
+	\kappa_{\psi\psi} \pdv[2]{\phi}{\psi} +
+	\kappa_{\theta} \pdv{\psi}{\theta} +
+	\kappa_{\phi} \pdv{\psi}{\phi}
+\end{equation*}
+\begin{equation*}
+	\begin{aligned}
+		\kappa_{\theta\theta} & = \sin^2 \theta \cdot  \Sigma_{\theta\theta}         \\
+		\kappa_{\psi\psi}     & = \Sigma_{\phi\phi}                                  \\
+		\kappa_{\theta}       & =
+		\sin^2\theta\cdot \pdv{\Sigma_{\theta\theta}}{\theta}
+		+ \sin \theta\cos\theta\cdot \Sigma_{\theta\theta}
+		- \sin\theta\cdot\pdv{\Sigma_{\theta\phi}}{\phi}                             \\
+		\kappa_{\phi}         & = \sin\theta\cdot\pdv{\Sigma_{\theta\phi}}{\theta} +
+		\pdv{\Sigma_{\phi\phi}}{\phi}                                                \\
+	\end{aligned}
+\end{equation*}
+\end{document}
+
