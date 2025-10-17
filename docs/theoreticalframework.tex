@@ -2,12 +2,12 @@
 \usepackage{graphicx} \usepackage{physics}
 \usepackage{amsmath}
 
-\title{Research Project First draft}
-\author{sebastien } \date{October 2025}
+\title{\vspace{-4cm} Discretized model of the ionosphere potential}
+\author{Sebastien Psarianos} \date{October 2025}
 
 \begin{document}
-
-
+\maketitle
+\section{Equation Simplicifaction}
 
 The initial equation given by the goodman paper is as follows:
 \begin{equation*}
@@ -133,23 +133,24 @@ term in the first $\phi$ derivative coefficient can be expanded with the quotien
 \end{equation*}
 This cancels out the other term of $\Sigma_{\theta\phi}\cdot \cos\theta$ in the same coefficient. Separating out the coefficients, we arrive at the following expression for the original equation:
 
-\begin{equation*}
-	\sin^2\theta R_E^2 j_r = \kappa_{\theta\theta}\pdv[2]{\psi}{\theta} +
-	\kappa_{\psi\psi} \pdv[2]{\phi}{\psi} +
-	\kappa_{\theta} \pdv{\psi}{\theta} +
-	\kappa_{\phi} \pdv{\psi}{\phi}
-\end{equation*}
-\begin{equation*}
-	\begin{aligned}
-		\kappa_{\theta\theta} & = \sin^2 \theta \cdot  \Sigma_{\theta\theta}         \\
-		\kappa_{\psi\psi}     & = \Sigma_{\phi\phi}                                  \\
-		\kappa_{\theta}       & =
+\begin{subequations}
+	\begin{align}
+		\sin^2\theta R_E^2 j_r & = \kappa_{\theta\theta}\pdv[2]{\psi}{\theta} +
+		\kappa_{\psi\psi} \pdv[2]{\psi}{\psi} +
+		\kappa_{\theta} \pdv{\psi}{\theta} +
+		\kappa_{\phi} \pdv{\psi}{\phi}                                                \\
+		\kappa_{\theta\theta}  & = \sin^2 \theta \cdot  \Sigma_{\theta\theta}         \\
+		\kappa_{\psi\psi}      & = \Sigma_{\phi\phi}                                  \\
+		\kappa_{\theta}        & =
 		\sin^2\theta\cdot \pdv{\Sigma_{\theta\theta}}{\theta}
 		+ \sin \theta\cos\theta\cdot \Sigma_{\theta\theta}
-		- \sin\theta\cdot\pdv{\Sigma_{\theta\phi}}{\phi}                             \\
-		\kappa_{\phi}         & = \sin\theta\cdot\pdv{\Sigma_{\theta\phi}}{\theta} +
-		\pdv{\Sigma_{\phi\phi}}{\phi}                                                \\
-	\end{aligned}
-\end{equation*}
+		- \sin\theta\cdot\pdv{\Sigma_{\theta\phi}}{\phi}                              \\
+		\kappa_{\phi}          & = \sin\theta\cdot\pdv{\Sigma_{\theta\phi}}{\theta} +
+		\pdv{\Sigma_{\phi\phi}}{\phi}
+	\end{align}
+\end{subequations}
+At this point, there are no longer any cross terms remaining in the equation, only first and second order derivatives of $\psi$.
+\section{Discretization}
+
 \end{document}
 
