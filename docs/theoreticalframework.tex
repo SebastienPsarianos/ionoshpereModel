@@ -10,13 +10,14 @@
 \section{Equation Simplicifaction}
 
 The initial equation given by the goodman paper is as follows:
-\begin{equation*}
+\begin{equation}
+    \label{e:goodman}
 	\begin{aligned}
 		j_R
 		 & = \frac1{R_e^2} \Bigg[
 			\left( \Sigma_{\theta\theta} - \frac{\Sigma_{\theta R} \tan\theta}{2} \right)
 		\pdv[2]{\psi}{\theta}                                                         \\[6pt]
-		 & \quad + \frac1{\sin\theta}
+	 & \quad + \frac1{\sin\theta}
 		\left( \Sigma_{\theta\phi} + \Sigma_{\phi\theta} - \frac{\Sigma_{\phi R} \tan\theta}{2} \right)
 		\pdv{\psi}{\phi}{\theta}                                                      \\[6pt]
 		 & \quad + \frac{\Sigma_{\phi\phi}}{\sin^2\theta}
@@ -34,7 +35,7 @@ The initial equation given by the goodman paper is as follows:
 		\Bigg\}\pdv{\psi}{\phi}
 		\Bigg]_{R = R_e}
 	\end{aligned}
-\end{equation*}
+\end{equation}
 By moving the $R_E^2$ term to the left side and then multiplying both sides by $\sin^2\theta$, we arrive at:
 \begin{equation*}
 	\begin{aligned}
@@ -63,15 +64,23 @@ By moving the $R_E^2$ term to the left side and then multiplying both sides by $
 		\Bigg]_{R = R_e}
 	\end{aligned}
 \end{equation*}
-As given by the comment on the paper by O.Amm, the conductance tensor is:
-\begin{equation*}
+By the comment on the paper by O.Amm, the conductance tensor (Equation 1 in the comment) is given as:
+\begin{equation}
+    \label{e:conductance_tensor}
 	\Sigma_{(R, \theta,\phi)} = \left(\begin{matrix}
 			0 & 0                                         & 0                                                \\
 			0 & \frac{\Sigma_0\Sigma_P}{C}                & \frac{\Sigma_0\Sigma_H(-\cos\varepsilon)}{C}     \\
 			0 & \frac{\Sigma_0\Sigma_H\cos\varepsilon}{C} & \Sigma_P + \frac{\Sigma_H^2\sin^2\varepsilon}{C}
 		\end{matrix}\right)
-\end{equation*}
-From this, it is clear that $\Sigma_{\theta\phi} = -\Sigma_{\phi\theta}$ and $\Sigma_{\theta R} = \Sigma_{\phi R} = 0$. We can therefore, make subsitutions $\Sigma_{\psi\theta} = -\Sigma_{\theta\psi}$ on lines 2 and 6:
+\end{equation}
+Where the values C, $\cos\varepsilon$ and $\sin\varepsilon$ are defined as follows:
+\begin{align}
+    \label{e:c} C=&&\Sigma_0\cos^2\theta + \Sigma_P\sin^2\theta\\
+    \label{e:cos_varep} \cos\varepsilon&&= \frac{-2\cos\theta}{\sqrt{1+3\cos^2\theta}}\\
+    \label{e:sin_varep}\sin\varepsilon&&= \frac{}{}
+\end{align}
+Where Equation \ref{e:c} is given in O.Amm's comment, and Equations \ref{e:cos_varep} and \ref{e:sin_varep} correspond to Equations 21 and 22 in Goodmans original paper respectively.\\
+The conductance tensor (Equation \ref{e:conductance_tensor}) allows some terms to be eliminated. $\Sigma_{\theta\phi} = -\Sigma_{\phi\theta}$ and $\Sigma_{\theta R} = \Sigma_{\phi R} = 0$. We can therefore, make subsitutions $\Sigma_{\psi\theta} = -\Sigma_{\theta\psi}$ on lines 2 and 5:
 \begin{equation*}
 	\begin{aligned}
 		\sin^2\theta \cdot R_e^2j_R
@@ -131,26 +140,78 @@ term in the first $\phi$ derivative coefficient can be expanded with the quotien
 		 & = \sin\theta\cdot\pdv{\Sigma_{\theta\phi}}{\theta} - \Sigma_{\theta\phi}\cdot \cos\theta                         \\
 	\end{aligned}
 \end{equation*}
-This cancels out the other term of $\Sigma_{\theta\phi}\cdot \cos\theta$ in the same coefficient. Separating out the coefficients, we arrive at the following expression for the original equation:
+This cancels out the other term of $\Sigma_{\theta\phi}\cdot \cos\theta$ in the same coefficient. Separating out the coefficients, we arrive at the following expression for Equation \ref{e:goodman}:
 
-\begin{subequations}
-	\begin{align}
+\begin{equation}
+	\begin{aligned}
+        \label{e:coeff_form}
 		\sin^2\theta R_E^2 j_r & = \kappa_{\theta\theta}\pdv[2]{\psi}{\theta} +
-		\kappa_{\psi\psi} \pdv[2]{\psi}{\psi} +
+		\kappa_{\phi\phi} \pdv[2]{\psi}{\phi} +
 		\kappa_{\theta} \pdv{\psi}{\theta} +
 		\kappa_{\phi} \pdv{\psi}{\phi}                                                \\
 		\kappa_{\theta\theta}  & = \sin^2 \theta \cdot  \Sigma_{\theta\theta}         \\
-		\kappa_{\psi\psi}      & = \Sigma_{\phi\phi}                                  \\
+		\kappa_{\phi\phi}      & = \Sigma_{\phi\phi}                                  \\
 		\kappa_{\theta}        & =
 		\sin^2\theta\cdot \pdv{\Sigma_{\theta\theta}}{\theta}
 		+ \sin \theta\cos\theta\cdot \Sigma_{\theta\theta}
 		- \sin\theta\cdot\pdv{\Sigma_{\theta\phi}}{\phi}                              \\
 		\kappa_{\phi}          & = \sin\theta\cdot\pdv{\Sigma_{\theta\phi}}{\theta} +
 		\pdv{\Sigma_{\phi\phi}}{\phi}
-	\end{align}
-\end{subequations}
-At this point, there are no longer any cross terms remaining in the equation, only first and second order derivatives of $\psi$.
-\section{Discretization}
+	\end{aligned}
+\end{equation}
+At this point, there are no longer any cross terms remaining in the equation, only first and second order derivatives of $\psi$. Using Equation \ref{e:conductance_tensor}, along with the expansions of $C$, $\cos\varepsilon$ and $\sin\varepsilon$ given in Equations \ref{e:c}, \ref{e:cos_varep} and \ref{e:sin_varep} the conductance tensor components remaining in the equation can be put in terms of $\theta,\phi$. 
+\begin{align*}
+    \Sigma_{\theta\theta} 
+        &= \frac{\Sigma_0\Sigma_P}{C}
+        = \frac{\Sigma_0\Sigma_P}{\Sigma_0\cos^2 \varepsilon + \Sigma_P\sin^2\varepsilon}\\
+        &= \frac{\Sigma_0\Sigma_P(1+3\cos^2\theta)}{\Sigma_0\cos^2 \theta+ \Sigma_P\sin^2\theta}\\\\
+    \Sigma_{\theta\phi} 
+        &= \frac{-\Sigma_0\Sigma_P\cos\varepsilon}{C}
+        =\frac{-\Sigma_0\Sigma_P\cos\varepsilon}{\Sigma_0\cos^2 \varepsilon + \Sigma_P\sin^2\varepsilon}\\
+        &= \frac{-\Sigma_0\Sigma_P\cos\varepsilon(1+3\cos^2\theta)}{4\Sigma_0\cos^2 \theta+ \Sigma_P\sin^2\theta}
+        = \frac{2\Sigma_0\Sigma_P\cos\theta\sqrt{1+3\cos^2\theta}}{4\Sigma_0\cos^2 \theta+ \Sigma_P\sin^2\theta}\\
+        &= \frac{2\Sigma_0\Sigma_P\sqrt{1+3\cos^2\theta}}{4\Sigma_0\cos \theta+ \Sigma_P\sin\theta\tan\theta}\\\\
+    \Sigma_{\phi\phi} 
+        &=  \Sigma_P + \frac{\Sigma_H^2\sin^2\varepsilon}{\Sigma_0\cos^2\varepsilon + \Sigma_P\sin^2\varepsilon} 
+        = \Sigma_P + \frac{\Sigma_H^2\sin^2\theta}{4\Sigma_0\cos^2\theta+ \Sigma_P\sin^2\theta} \cdot \frac{\sqrt{1+3\cos^2\theta}}{\sqrt{1+3\cos^2\theta}}\\
+        &= \Sigma_P + \frac{\Sigma^2+H}{4\Sigma_0\cot^2\theta + \Sigma_P}
+\end{align*}
+This results in the following set of equations for the conductance tensor components:
+\begin{align}
+    \label{e:sig_thth}\Sigma_{\theta\theta} 
+    =&& \frac{\Sigma_0\Sigma_P(1+3\cos^2\theta)}{\Sigma_0\cos^2 \theta+ \Sigma_P\sin^2\theta}\\
+    \label{e:sig_thph}\Sigma_{\theta\phi} 
+    =&& \frac{2\Sigma_0\Sigma_P\sqrt{1+3\cos^2\theta}}{4\Sigma_0\cos \theta+ \Sigma_P\sin\theta\tan\theta}\\
+    \label{e:sig_phph}\Sigma_{\phi\phi} 
+    =&& \Sigma_P + \frac{\Sigma^2+H}{4\Sigma_0\cot^2\theta + \Sigma_P}
+\end{align}
 
+\section{Discretization}
+The resulting Equation \ref{e:coeff_form} can be discretized using a central difference approximation across the $\psi$ derivatives.
+\begin{align}
+    \left(\pdv[2]{\psi}{\theta}\right)_{i,j} 
+    &&= \frac{\psi_{i+1,j} - 2\psi_{i,j} + \psi_{i-1,j}}{\Delta\theta^2}\\[6pt]
+    \left(\pdv[2]{\psi}{\phi}\right)_{i,j} 
+    &&= \frac{\psi_{i,j+1} - 2\psi_{i,j} + \psi_{i,j-1}}{\Delta\phi^2}\\[6pt]
+    \left(\pdv{\psi}{\theta}\right)_{i,j} 
+    &&= \frac{\psi_{i+1,j} - \psi_{i-1,j}}{2\Delta\theta}\\[6pt]
+    \left(\pdv{\psi}{\phi}\right)_{i,j} 
+    &&= \frac{\psi_{i,j+1} - \psi_{i,j-1}}{2\Delta\phi}
+\end{align}
+Additionally, the same discretezation approximation can be applied to the $\Sigma$ derivative terms.
+\begin{align}
+    \label{e:dSig_thth_th}\left(\pdv{\Sigma_{\theta\theta}}{\theta}\right)_{i,j} =&& \frac{(\Sigma_{\theta\theta})_{i+1,j} - (\Sigma_{\theta\theta})_{i-1,j}}{2\Delta\theta}\\
+    \label{e:dSig_thph_ph}\left(\pdv{\Sigma_{\theta\phi}}{\phi}\right)_{i,j} =&& \frac{\left(\Sigma_{\theta\phi}\right)_{i,j+1} - (\Sigma_{\theta\phi})_{i,j-1}}{2\Delta\phi}\\
+    \label{e:dSig_thph_th}\left(\pdv{\Sigma_{\theta\phi}}{\theta}\right)_{i,j} =&& \frac{(\Sigma_{\theta\phi})_{i+1,j}- (\Sigma_{\theta\phi})_{i-1,j}}{2\Delta\theta}\\
+    \label{e:dSig_phph_ph}\left(\pdv{\Sigma_{\phi\phi}}{\phi}\right)_{i,j} =&& \frac{(\Sigma_{\phi\phi})_{i,j+1} - (\Sigma_{\phi\phi})_{i,j-1}}{2\Delta\phi}
+\end{align}
+It is possible to determine an analytical solution to all of these derivatives, however for the first iteration of this algorithm, a finite difference approach will be conducted.
+\section{Implementation}
+To implement the solver for Equation \ref{e:coeff_form} will be implemented in C++ using a trilinus package that is yet to be determined. The steps for computation involve.  
+\begin{enumerate}
+    \item Computing conductance values $\Sigma_0$, $\Sigma_H$ and $\Sigma_P$ across the solution domain. This will be done using empirical data of the ionosphere. This data will then be used to calculate relevant values of the conductance tensor utilizing \ref{e:sig_thth}, \ref{e:sig_thph} and \ref{e:sig_phph}.
+    \item Computing the finite difference approximation for the conductance derivatives shown in Equations \ref{e:dSig_thth_th}, \ref{e:dSig_thph_ph}, \ref{e:dSig_thph_th} and \ref{e:dSig_phph_ph}. This will be done using trillinus. In a future iteration, this step may be replaced with an analytical solution to these equations.
+    \item Computing the finite difference approximation for Equation \ref{e:coeff_form} using the values computed in step 1 and 2 also using trilinus.
+\end{enumerate}
 \end{document}
 
