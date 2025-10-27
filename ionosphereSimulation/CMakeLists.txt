@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(MyProject LANGUAGES CXX)
+project(IonosphereSolver LANGUAGES CXX)
 
 # Use C++17 or higher (adjust as needed)
 set(CMAKE_CXX_STANDARD 17)
