@@ -1,24 +1,17 @@
 #pragma once
-
-#include "Coords.hpp"
 #include "Grid.hpp"
-#include <memory>
 
 class Conductance {
   public:
-    void calculateConductance(std::shared_ptr<GridSet<Coords>> coords,
-                              std::shared_ptr<GridSet<Sigma>> sigma,
-                              std::shared_ptr<GridSet<HppSigma>> hppSigma,
-                              std::shared_ptr<GridSet<DSigma>> dSigma, int nTh,
-                              int nPh);
+    static void calculateConductance(GridSet<Coords>& coords,
+                                     GridSet<Sigma>& sigma,
+                                     GridSet<HppSigma>& hppSigma,
+                                     GridSet<DSigma>& dSigma);
 
   private:
-    static void _calcSigma(std::shared_ptr<GridSet<Coords>> coords,
-                           std::shared_ptr<GridSet<Sigma>> sigma,
-                           std::shared_ptr<GridSet<HppSigma>> hppSigma, int nTh,
-                           int nPh);
-    static void _calcSigmaDer(std::shared_ptr<GridSet<Coords>> coords,
-                              std::shared_ptr<GridSet<Sigma>> sigma,
-                              std::shared_ptr<GridSet<DSigma>> dSigma, int nTh,
-                              int nPh);
+    static void _calcSigma(GridSet<Coords>& coords, GridSet<Sigma>& sigma,
+                           GridSet<HppSigma>& hppSigma);
+
+    static void _calcSigmaDer(GridSet<Coords>& coords, GridSet<Sigma>& sigma,
+                              GridSet<DSigma>& dSigma);
 };
