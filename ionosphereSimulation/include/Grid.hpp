@@ -12,10 +12,10 @@ class Grid {
     std::vector<double> _grid;
 };
 
-class GridSet {
+template <typename T> class GridSet {
   public:
     GridSet(size_t count, size_t nTh, size_t nPh);
-    double& operator()(unsigned int idx, unsigned int th, unsigned int ph);
+    double& operator()(T idx, unsigned int th, unsigned int ph);
 
     const size_t nTh;
     const size_t nPh;
