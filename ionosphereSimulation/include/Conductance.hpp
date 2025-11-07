@@ -1,19 +1,22 @@
 #pragma once
+#include "Coords.hpp"
 #include "Grid.hpp"
-
-const int THTH = 0;
-const int THPH = 1;
-const int PHPH = 2;
-
-const int DTHTH_TH = 0;
-const int DTHPH_PH = 1;
-const int DTHPH_TH = 2;
-const int DPHPH_PH = 3;
 
 class Conductance {
   public:
-    Conductance(size_t nTh, size_t nPh);
+    void calculateConductance(std::shared_ptr<GridSet<Coords>> coords,
+                              std::shared_ptr<GridSet<Sigma>> sigma,
+                              std::shared_ptr<GridSet<HppSigma>> hppSigma,
+                              std::shared_ptr<GridSet<DSigma>> dSigma, int nTh,
+                              int nPh);
 
-    GridSet _conductances;
-    GridSet _conductanceDerivatives;
+  private:
+    static void _calcSigma(std::shared_ptr<GridSet<Coords>> coords,
+                           std::shared_ptr<GridSet<Sigma>> sigma,
+                           std::shared_ptr<GridSet<HppSigma>> hppSigma, int nTh,
+                           int nPh);
+    static void _calcSigmaDer(std::shared_ptr<GridSet<Coords>> coords,
+                              std::shared_ptr<GridSet<Sigma>> sigma,
+                              std::shared_ptr<GridSet<DSigma>> dSigma, int nTh,
+                              int nPh);
 };
