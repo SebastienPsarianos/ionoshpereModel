@@ -1,6 +1,8 @@
 #pragma once
+
 #include "Coords.hpp"
 #include "Grid.hpp"
+#include <memory>
 
 class Conductance {
   public:
