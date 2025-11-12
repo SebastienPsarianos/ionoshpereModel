@@ -5,13 +5,16 @@
 #include <vector>
 
 enum class Coords { TH, PH, COUNT };
+enum class Ang { TH, PH, COUNT };
+enum class Cart { X, Y, Z };
 enum class Sigma { THTH, THPH, PHPH, COUNT };
 enum class DSigma { DTHTH_TH, DTHPH_PH, DTHPH_TH, DPHPH_PH, COUNT };
 enum class HppSigma { HALL, PEDERSON, PARALLEL, COUNT };
 
 template <typename E>
 concept ValidEnum = std::is_same_v<E, Coords> || std::is_same_v<E, Sigma> ||
-                    std::is_same_v<E, DSigma> || std::is_same_v<E, HppSigma>;
+                    std::is_same_v<E, DSigma> || std::is_same_v<E, HppSigma> ||
+                    std::is_same_v<E, Ang> || std::is_same_v<E, Cart>;
 
 class Grid {
   public:
