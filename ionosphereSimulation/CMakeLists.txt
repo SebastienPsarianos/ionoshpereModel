@@ -8,9 +8,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(SOURCES
     src/main.cpp
+    src/Grid.cpp
     src/Conductance.cpp
-   src/Grid.cpp
     src/Coordinates.cpp
+    src/LegacyMHDConversion.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

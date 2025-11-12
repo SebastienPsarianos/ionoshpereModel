@@ -1,4 +1,5 @@
 #pragma once
+#include <iostream>
 #include <map>
 #include <memory>
 #include <optional>
@@ -6,7 +7,7 @@
 
 enum class Coords { TH, PH, COUNT };
 enum class Ang { TH, PH, COUNT };
-enum class Cart { X, Y, Z };
+enum class Cart { X, Y, Z, COUNT };
 enum class Sigma { THTH, THPH, PHPH, COUNT };
 enum class DSigma { DTHTH_TH, DTHPH_PH, DTHPH_TH, DPHPH_PH, COUNT };
 enum class HppSigma { HALL, PEDERSON, PARALLEL, COUNT };
@@ -20,6 +21,18 @@ class Grid {
   public:
     Grid(size_t nTh, size_t nPh, double initialValue);
     double& operator()(size_t th, size_t ph);
+    void printGrid();
+    friend std::ostream& operator<<(std::ostream& outs, const Grid& g) {
+        for (size_t th = 0; th < g.nTh; th++) {
+            for (size_t ph = 0; ph < g.nPh; ph++) {
+                outs << g._grid[th * g.nPh + ph];
+                outs << ", ";
+            }
+            outs << "\n";
+        }
+
+        return outs;
+    }
 
     const size_t nTh;
     const size_t nPh;
@@ -33,6 +46,15 @@ template <ValidEnum T> class GridSet {
     GridSet(size_t nTh, size_t nPh,
             std::optional<std::map<T, double>> initialValues = std::nullopt);
     double& operator()(T idx, unsigned int th, unsigned int ph);
+
+    friend std::ostream& operator<<(std::ostream& outs, const GridSet<T>& gs) {
+        for (int grid = 0; grid < static_cast<int>(T::COUNT); grid++) {
+            T test = static_cast<T>(grid);
+            outs << *(gs._grids.at(test));
+            outs << "\n";
+        }
+        return outs;
+    }
 
     const size_t nTh;
     const size_t nPh;
