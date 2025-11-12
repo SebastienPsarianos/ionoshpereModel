@@ -40,6 +40,7 @@ void IONOSPHERE_update();
 void IONOSPHERE_matcopy();
 void IONOSPHERE_matzero();
 void IONOSPHERE_magfac();
+void IONOSPHERE_magbfield();
+void IONOSPHERE_magdim();
 void IONOSPHERE_magvel();
 void IONOSPHERE_current();
-

@@ -1,11 +1,61 @@
 #include "LegacyMHDConversion.hpp"
-#include <vector>
+#include <fstream>
+#include <iostream>
 
-void LegacyMHDConversion::magbfield(
-    std::vector<double> Bx, std::vector<double> By, std::vector<double> Bz,
-    std::vector<double> theta, std::vector<double> psi, std::vector<double> x,
-    std::vector<double> y, std::vector<double> z,
+int LegacyMHDConversion::processLegacyOutput(std::string filename,
+                                             GridSet<Ang>& coordValues,
+                                             Grid& radCurrent, int nTh,
+                                             int nPh) {
+    std::fstream dataFile = std::fstream(filename);
 
-) {}
-void LegacyMHDConversion::magdim() {}
-void LegacyMHDConversion::magfac() {}
+    if (!dataFile.is_open()) {
+        std::cerr << "Error: Failed to open input file" << std::endl;
+        return -1;
+    }
+
+    dataFile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+    std::string line;
+    for (int th = 0; th < nTh; th++) {
+        for (int ph = 0; ph < nPh; ph++) {
+            if (!dataFile.eof()) {
+                std::getline(dataFile, line);
+                std::sscanf(line.c_str(), "%lf %lf %lf",
+                            &coordValues(Ang::TH, th, ph),
+                            &coordValues(Ang::PH, th, ph), &radCurrent(th, ph));
+
+                std::cout << "Theta (" << th << ", "
+                          << coordValues(Ang::TH, th, ph) << ")\n";
+                std::cout << "Phi (" << ph << ", "
+                          << coordValues(Ang::PH, th, ph) << ")\n\n";
+
+            } else {
+                std::cerr << "Invalid Data File\n";
+                return -1;
+            }
+        }
+    }
+
+    std::cout << "COORDS" << std::endl;
+    std::cout << coordValues;
+    std::cout << std::endl;
+
+    std::cout << "Radial Current" << std::endl;
+    std::cout << radCurrent;
+
+    return 0;
+}
+
+int LegacyMHDConversion::getGridSize(std::string filename, int* nTh, int* nPh) {
+    std::fstream dataFile = std::fstream(filename);
+    if (!dataFile.is_open()) {
+        std::cerr << "Error: Failed to open input file" << std::endl;
+        return -1;
+    }
+
+    std::string line;
+    if (std::getline(dataFile, line)) {
+        std::sscanf(line.c_str(), "th: %d, ph: %d", nTh, nPh);
+    }
+    return 0;
+}
