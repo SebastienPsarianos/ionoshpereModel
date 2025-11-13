@@ -12,6 +12,7 @@ set(SOURCES
     src/Conductance.cpp
     src/Coordinates.cpp
     src/LegacyMHDConversion.cpp
+    src/Solver.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

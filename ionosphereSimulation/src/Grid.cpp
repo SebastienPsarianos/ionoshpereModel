@@ -17,8 +17,8 @@ GridSet<T>::GridSet(size_t nTh, size_t nPh,
     : nTh(nTh), nPh(nPh) {
 
     if (!initialValues.has_value()) {
-        for (int i = 0; i < static_cast<int>(T::COUNT); i++) {
-            _grids[static_cast<T>(i)] = std::make_unique<Grid>(nTh, nPh, 0);
+        for (int grid = 0; grid < static_cast<int>(T::COUNT); grid++) {
+            _grids.try_emplace(static_cast<T>(grid), nTh, nPh, 0);
         }
         return;
     }
@@ -30,7 +30,7 @@ GridSet<T>::GridSet(size_t nTh, size_t nPh,
     }
 
     for (const auto& [grid, value] : initialValues.value()) {
-        _grids[grid] = std::make_unique<Grid>(nTh, nPh, value);
+        _grids.try_emplace(static_cast<T>(grid), nTh, nPh, value);
     }
 }
 
@@ -42,7 +42,7 @@ double& GridSet<T>::operator()(T grid, unsigned int th, unsigned int ph) {
     if (ph >= nPh) {
         throw std::out_of_range("Index PHI out of range");
     }
-    return (*_grids[grid])(th, ph);
+    return _grids.at(grid)(th, ph);
 }
 
 template class GridSet<Sigma>;
@@ -51,3 +51,4 @@ template class GridSet<Coords>;
 template class GridSet<DSigma>;
 template class GridSet<HppSigma>;
 template class GridSet<Cart>;
+template class GridSet<Coeff>;

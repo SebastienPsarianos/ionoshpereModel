@@ -2,10 +2,9 @@
 #include <fstream>
 #include <iostream>
 
-int LegacyMHDConversion::processLegacyOutput(std::string filename,
-                                             GridSet<Ang>& coordValues,
-                                             Grid& radCurrent, int nTh,
-                                             int nPh) {
+int LegacyMHDConversion::processLegacyOutput(
+    std::string filename, std::shared_ptr<GridSet<Ang>> coordValues,
+    std::shared_ptr<Grid> radCurrent, int nTh, int nPh) {
     std::fstream dataFile = std::fstream(filename);
 
     if (!dataFile.is_open()) {
@@ -21,13 +20,9 @@ int LegacyMHDConversion::processLegacyOutput(std::string filename,
             if (!dataFile.eof()) {
                 std::getline(dataFile, line);
                 std::sscanf(line.c_str(), "%lf %lf %lf",
-                            &coordValues(Ang::TH, th, ph),
-                            &coordValues(Ang::PH, th, ph), &radCurrent(th, ph));
-
-                std::cout << "Theta (" << th << ", "
-                          << coordValues(Ang::TH, th, ph) << ")\n";
-                std::cout << "Phi (" << ph << ", "
-                          << coordValues(Ang::PH, th, ph) << ")\n\n";
+                            &(*coordValues)(Ang::TH, th, ph),
+                            &(*coordValues)(Ang::PH, th, ph),
+                            &(*radCurrent)(th, ph));
 
             } else {
                 std::cerr << "Invalid Data File\n";
@@ -35,13 +30,6 @@ int LegacyMHDConversion::processLegacyOutput(std::string filename,
             }
         }
     }
-
-    std::cout << "COORDS" << std::endl;
-    std::cout << coordValues;
-    std::cout << std::endl;
-
-    std::cout << "Radial Current" << std::endl;
-    std::cout << radCurrent;
 
     return 0;
 }
