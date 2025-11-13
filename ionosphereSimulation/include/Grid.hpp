@@ -1,7 +1,6 @@
 #pragma once
 #include <iostream>
 #include <map>
-#include <memory>
 #include <optional>
 #include <vector>
 
@@ -11,11 +10,13 @@ enum class Cart { X, Y, Z, COUNT };
 enum class Sigma { THTH, THPH, PHPH, COUNT };
 enum class DSigma { DTHTH_TH, DTHPH_PH, DTHPH_TH, DPHPH_PH, COUNT };
 enum class HppSigma { HALL, PEDERSON, PARALLEL, COUNT };
+enum class Coeff { THTH, PHPH, TH, PH, COUNT };
 
 template <typename E>
 concept ValidEnum = std::is_same_v<E, Coords> || std::is_same_v<E, Sigma> ||
                     std::is_same_v<E, DSigma> || std::is_same_v<E, HppSigma> ||
-                    std::is_same_v<E, Ang> || std::is_same_v<E, Cart>;
+                    std::is_same_v<E, Ang> || std::is_same_v<E, Cart> ||
+                    std::is_same_v<E, Coeff>;
 
 class Grid {
   public:
@@ -34,8 +35,8 @@ class Grid {
         return outs;
     }
 
-    const size_t nTh;
-    const size_t nPh;
+    size_t nTh;
+    size_t nPh;
 
   private:
     std::vector<double> _grid;
@@ -56,10 +57,9 @@ template <ValidEnum T> class GridSet {
         return outs;
     }
 
-    const size_t nTh;
-    const size_t nPh;
+    size_t nTh;
+    size_t nPh;
 
   private:
-    // TODO: Does this need to be a unique ptr
-    std::map<T, std::unique_ptr<Grid>> _grids;
+    std::map<T, Grid> _grids;
 };

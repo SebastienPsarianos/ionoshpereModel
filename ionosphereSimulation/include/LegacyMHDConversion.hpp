@@ -4,7 +4,8 @@
 class LegacyMHDConversion {
   public:
     static int processLegacyOutput(std::string filename,
-                                   GridSet<Ang>& coordValues, Grid& radCurrent,
-                                   int nTh, int nPh);
+                                   std::shared_ptr<GridSet<Ang>> coordValues,
+                                   std::shared_ptr<Grid> radCurrent, int nTh,
+                                   int nPh);
     static int getGridSize(std::string filename, int* nTh, int* nPh);
 };
