@@ -26,7 +26,7 @@ class Grid {
     friend std::ostream& operator<<(std::ostream& outs, const Grid& g) {
         for (size_t th = 0; th < g.nTh; th++) {
             for (size_t ph = 0; ph < g.nPh; ph++) {
-                outs << g._grid[th * g.nPh + ph];
+                outs << g._grid.at(th * g.nPh + ph);
                 outs << ", ";
             }
             outs << "\n";
@@ -51,7 +51,7 @@ template <ValidEnum T> class GridSet {
     friend std::ostream& operator<<(std::ostream& outs, const GridSet<T>& gs) {
         for (int grid = 0; grid < static_cast<int>(T::COUNT); grid++) {
             T test = static_cast<T>(grid);
-            outs << *(gs._grids.at(test));
+            outs << gs._grids.at(test);
             outs << "\n";
         }
         return outs;

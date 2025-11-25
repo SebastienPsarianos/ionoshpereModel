@@ -43,7 +43,7 @@ void Conductance::_calcSigma() {
 
 void Conductance::_calcSigmaDer() {
     const double _dTh = (*_coords)(Ang::TH, 1, 0) - (*_coords)(Ang::TH, 0, 0);
-    const double dPh = (*_coords)(Ang::TH, 0, 1) - (*_coords)(Ang::TH, 0, 0);
+    const double dPh = (*_coords)(Ang::PH, 0, 1) - (*_coords)(Ang::PH, 0, 0);
 
     // TODO: Theta boundary conditions
 
