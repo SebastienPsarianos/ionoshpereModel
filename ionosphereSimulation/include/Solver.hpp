@@ -1,7 +1,7 @@
 #include "Grid.hpp"
 
-#define MAX_ITERATION_NUM 10000000
-#define RES_THRESHOLD 0.01
+#define MAX_ITERATION_NUM 100000
+#define RES_THRESHOLD 10
 
 #define IONOSPHERE_Radius_Earth 6378000.00
 #define IONOSPHERE_Height_Earth 400000.00

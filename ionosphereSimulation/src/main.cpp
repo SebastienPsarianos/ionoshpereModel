@@ -32,6 +32,4 @@ int main(int argc, char* argv[]) {
 
     Solver solver = Solver(nTh, nPh, kappa, coords, radCurrent, GAUSS_SEIDEL);
     std::shared_ptr<Grid> potential = solver.calculatePotential();
-
-    std::cout << potential;
 }
