@@ -1,16 +1,28 @@
 #include "Solver.hpp"
+#include "Constants.hpp"
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
 #include <stdexcept>
 
-Solver::Solver(int nTh, int nPh, std::shared_ptr<GridSet<Coeff>> kappa,
+Solver::Solver(size_t nTh, size_t nPh, std::shared_ptr<GridSet<Coeff>> kappa,
                std::shared_ptr<GridSet<Ang>> coords,
                std::shared_ptr<Grid> radCurrent, Algorithm algorithm)
     : nTh(nTh), nPh(nPh), radCurrent(radCurrent), coords(coords), kappa(kappa),
       algorithm(algorithm), previousIteration(nTh, nPh, 0) {
 
     potential = std::make_shared<Grid>(nTh, nPh, 0);
+
+    // Initial guess
+    for (size_t th = 1; th < nTh - 1; th++) {
+        for (size_t ph = 0; ph < nPh; ph++) {
+            (*potential)(th, ph) = (*radCurrent)(th, ph);
+            if (ph == nPh - 1) {
+                (*potential)(th, ph) = (*radCurrent)(th, 0);
+            }
+        }
+    }
+
     dTh = (*coords)(Ang::TH, 1, 0) - (*coords)(Ang::TH, 0, 0);
     dPh = (*coords)(Ang::PH, 0, 1) - (*coords)(Ang::TH, 0, 0);
     dTh2 = dTh * dTh;
@@ -28,34 +40,48 @@ std::shared_ptr<Grid> Solver::calculatePotential() {
     //   the end of a sweep and then updating the first potential to be
     //   equal
 
-    int itt = 0;
-    double residual = 0;
-
     if (algorithm == GAUSS_SEIDEL) {
+        int itt = 0;
+        double uNew;
+        double uOld;
+        double gridDiff;
+        double gridNorm;
+        double maxDiff;
+
         for (itt = 0; itt < MAX_ITERATION_NUM; itt++) {
-            residual = 0;
+            gridDiff = 0;
+            maxDiff = 0;
+            gridNorm = 0;
+            // Red black ordering
             for (size_t th = 1; th < nTh - 1; th++) {
                 for (size_t ph = 1 + (itt + th) % 2; ph < nPh; ph = ph + 2) {
-                    (*potential)(th, ph) = _gaussSeidelFormula(th, ph);
-                    residual += _calculateResidual(th, ph);
-                    std::cout << _calculateResidual(th, ph) << "\n";
+                    uOld = (*potential)(th, ph);
+                    uNew = _gaussSeidelFormula(th, ph);
+
+                    (*potential)(th, ph) = uNew;
+                    gridDiff = std::abs(uOld - uNew);
+                    if (gridDiff > maxDiff)
+                        maxDiff = gridDiff;
+
+                    gridNorm += std::abs(uNew);
                 }
                 (*potential)(th, 0) = (*potential)(th, nPh - 1);
             }
 
-            residual /= (nPh - 1) * (nTh - 2);
+            gridNorm = gridNorm / (nPh * nTh);
 
-            if (residual <= RES_THRESHOLD) {
+            if (maxDiff / gridNorm <= RES_THRESHOLD) {
                 std::cout << "Algorithm converged in " << itt
-                          << " iterations with a residual of " << residual
-                          << std::endl;
+                          << " iterations with a residual of "
+                          << this->_calculateResidual() << std::endl;
                 return potential;
             }
         }
+        std::cerr << "Algorithm failed to converge in " << itt
+                  << " iterations, with residual " << this->_calculateResidual()
+                  << std::endl;
+        return nullptr;
     }
-
-    std::cerr << "Algorithm failed to converge in " << itt
-              << " iterations, with residual " << residual << std::endl;
     return nullptr;
 };
 
@@ -71,6 +97,7 @@ double Solver::_gaussSeidelFormula(size_t th, size_t ph) {
         throw new std::out_of_range(
             "potential should not be calculated directly at ph = 0");
     }
+    // TODO: Implement system to calculate unchanging values only once
     size_t right = ph == nPh - 1 ? 1 : ph + 1;
     double sin = std::sin((*coords)(Ang::TH, th, ph));
     double sin2 = sin * sin;
@@ -92,26 +119,31 @@ double Solver::_gaussSeidelFormula(size_t th, size_t ph) {
             (2 * (*kappa)(Coeff::PHPH, th, ph)) / dPh2);
 }
 
-double Solver::_calculateResidual(size_t th, size_t ph) {
+double Solver::_calculateResidual() {
+    double res = 0;
+    double norm = 0;
 
-    if (ph == 0) {
-        throw new std::out_of_range(
-            "Should not be calculating the residual at ph = 0");
+    for (size_t th = 1; th < nTh - 1; th++) {
+        for (size_t ph = 1; ph < nPh; ph++) {
+            size_t right = ph == nPh - 1 ? 1 : ph + 1;
+            double sin = std::sin((*coords)(Ang::TH, th, ph));
+            double sin2 = sin * sin;
+            norm += std::abs(sin2 * RADIUS_EARTH * (*radCurrent)(th, ph));
+            res += std::abs(
+                ((*kappa)(Coeff::THTH, th, ph) / dTh2) *
+                    ((*potential)(th + 1, ph) - 2 * (*potential)(th, ph) +
+                     (*potential)(th - 1, ph)) +
+                ((*kappa)(Coeff::PHPH, th, ph) / dPh2) *
+                    ((*potential)(th, right) - 2 * (*potential)(th, ph) +
+                     (*potential)(th, ph - 1)) +
+                ((*kappa)(Coeff::TH, th, ph) / (2 * dTh)) *
+                    ((*potential)(th + 1, ph) - (*potential)(th - 1, ph)) +
+                ((*kappa)(Coeff::PH, th, ph) / (2 * dPh)) *
+                    ((*potential)(th, right) - (*potential)(th, ph - 1)) -
+                sin2 * RADIUS_EARTH * (*radCurrent)(th, ph));
+        }
     }
-
-    size_t right = ph == nPh - 1 ? 1 : ph + 1;
-    double sin = std::sin((*coords)(Ang::TH, th, ph));
-    double sin2 = sin * sin;
-
-    return std::abs(((*kappa)(Coeff::THTH, th, ph) / dTh2) *
-                        ((*potential)(th + 1, ph) - 2 * (*potential)(th, ph) +
-                         (*potential)(th - 1, ph)) +
-                    ((*kappa)(Coeff::PHPH, th, ph) / dPh2) *
-                        ((*potential)(th, right) - 2 * (*potential)(th, ph) +
-                         (*potential)(th, ph - 1)) +
-                    ((*kappa)(Coeff::TH, th, ph) / (2 * dTh)) *
-                        ((*potential)(th + 1, ph) - (*potential)(th - 1, ph)) +
-                    ((*kappa)(Coeff::PH, th, ph) / (2 * dPh)) *
-                        ((*potential)(th, right) - (*potential)(th, ph - 1)) -
-                    sin2 * RADIUS_EARTH * (*radCurrent)(th, ph));
+    if (norm == 0)
+        return res;
+    return res / norm;
 }

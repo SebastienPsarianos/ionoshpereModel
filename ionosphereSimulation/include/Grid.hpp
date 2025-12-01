@@ -12,17 +12,26 @@ enum class DSigma { DTHTH_TH, DTHPH_PH, DTHPH_TH, DPHPH_PH, COUNT };
 enum class HppSigma { HALL, PEDERSON, PARALLEL, COUNT };
 enum class Coeff { THTH, PHPH, TH, PH, COUNT };
 
+struct {
+    double value;
+    double th_val;
+    double ph_val;
+} typedef GridVal;
+
 template <typename E>
 concept ValidEnum = std::is_same_v<E, Coords> || std::is_same_v<E, Sigma> ||
                     std::is_same_v<E, DSigma> || std::is_same_v<E, HppSigma> ||
                     std::is_same_v<E, Ang> || std::is_same_v<E, Cart> ||
                     std::is_same_v<E, Coeff>;
 
+template <ValidEnum T> class GridSet;
+
 class Grid {
   public:
     Grid(size_t nTh, size_t nPh, double initialValue);
     double& operator()(size_t th, size_t ph);
-    void printGrid();
+    std::ostream& printWithCoords(std::ostream& out, GridSet<Ang>& coords);
+
     friend std::ostream& operator<<(std::ostream& outs, const Grid& g) {
         for (size_t th = 0; th < g.nTh; th++) {
             for (size_t ph = 0; ph < g.nPh; ph++) {
@@ -47,6 +56,7 @@ template <ValidEnum T> class GridSet {
     GridSet(size_t nTh, size_t nPh,
             std::optional<std::map<T, double>> initialValues = std::nullopt);
     double& operator()(T idx, unsigned int th, unsigned int ph);
+    std::ostream& printWithCoords(std::ostream& out, GridSet<Ang>& coords);
 
     friend std::ostream& operator<<(std::ostream& outs, const GridSet<T>& gs) {
         for (int grid = 0; grid < static_cast<int>(T::COUNT); grid++) {
