@@ -1,4 +1,5 @@
 #include "Grid.hpp"
+#include <memory>
 #include <string>
 
 class LegacyMHDConversion {

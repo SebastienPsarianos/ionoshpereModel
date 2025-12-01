@@ -177,18 +177,6 @@ int main() {
      field-aligned and Hall and Pedersen conductivities
      (i.e., conductances). */
 
-  FILE *outputValues = fopen("outputValues.dat", "w");
-
-  fprintf(outputValues, "th: %d, ph: %d\n", IONOSPHERE_numberofnodes, nnodes);
-  // theta psi jr
-  for (int k = 1; k <= IONOSPHERE_numberofnodes; k++) {
-    for (int l = 1; l <= nnodes; l++) {
-      fprintf(outputValues, "%lf %lf %lf\n", Theta[k][l], Psi[k][l], JR[k][l]);
-    }
-  }
-
-  return 0;
-
   printf("\n Computing height-integrated conductivities.......");
   IONOSPHERE_conductance(Sigma0, SigmaH, SigmaP, SigmaThTh, SigmaThPs,
                          SigmaPsPs, dSigmaThTh_dTheta, dSigmaThPs_dTheta,
@@ -224,11 +212,44 @@ int main() {
                     Thetamag, Psimag, Xmag, Ymag, Zmag, nmag, InMagTri,
                     MagTriNode1, MagTriNode2, MagTriNode3, ntrimag);
 
+  // NOTE: This is added to grab data for new simuilation
+  FILE *coords_out = fopen("./coords_out.txt", "w");
+  FILE *jr_out = fopen("./jr_out.txt", "w");
+  FILE *sig_out = fopen("./sig_out.txt", "w");
+  FILE *dsig_out = fopen("./dsig_out.txt", "w");
+  FILE *pot_out = fopen("./pot_out.txt", "w");
+  FILE *e_out = fopen("./e_out.txt", "w");
+
+  for (j = 1; j <= nnodes; j++) {
+    for (i = 1; i <= nhemi; i++) {
+      fprintf(coords_out, "%g %g", Theta[i][j], Psi[i][j]);
+      fprintf(jr_out, "%g", JR[i][j]);
+      fprintf(sig_out, "%g %g %g", SigmaThTh[i][j], SigmaThPs[i][j],
+              SigmaPsPs[i][j]);
+      fprintf(dsig_out, "%g %g %g %g %g %g ", dSigmaThTh_dTheta[i][j],
+              dSigmaThPs_dTheta[i][j], dSigmaPsPs_dTheta[i][j],
+              dSigmaThTh_dPsi[i][j], dSigmaThPs_dPsi[i][j],
+              dSigmaPsPs_dPsi[i][j]);
+      fprintf(pot_out, "%g", PHI[i][j]);
+      fprintf(e_out, "%g %g ", ETh[i][j], EPs[i][j]);
+    }
+  }
+
+  fclose(coords_out);
+  fclose(jr_out);
+  fclose(sig_out);
+  fclose(dsig_out);
+  fclose(pot_out);
+  fclose(e_out);
+  return 0;
+
   /* Save ionospheric potential solution in a TECPLOT
      output data file for subsequent plotting . */
 
   printf("\n Generate Tecplot output file.......");
   iout = 1;
+
+  // 9
   nhemi = (IONOSPHERE_numberofnodes - 1) / 2 + 1;
   if (iout == 1) {
     IONOSPHERE_copy("ionosphere.dat", file_name);
