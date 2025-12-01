@@ -13,6 +13,7 @@ set(SOURCES
     src/Coordinates.cpp
     src/LegacyMHDConversion.cpp
     src/Solver.cpp
+    src/EField.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
