@@ -1,6 +1,7 @@
 #include "LegacyMHDConversion.hpp"
 #include <fstream>
 #include <iostream>
+#include <limits>
 
 int LegacyMHDConversion::processLegacyOutput(
     std::string filename, std::shared_ptr<GridSet<Ang>> coordValues,
@@ -12,6 +13,7 @@ int LegacyMHDConversion::processLegacyOutput(
         return -1;
     }
 
+    // Ignore first line
     dataFile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
     std::string line;

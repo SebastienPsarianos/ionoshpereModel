@@ -1,4 +1,7 @@
+#pragma once
+
 #include "Grid.hpp"
+#include <memory>
 
 #define MAX_ITERATION_NUM 100000
 #define RES_THRESHOLD 10

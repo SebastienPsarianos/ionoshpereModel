@@ -1,5 +1,6 @@
 #pragma once
 #include "Grid.hpp"
+#include <memory>
 
 class Conductance {
   public:
