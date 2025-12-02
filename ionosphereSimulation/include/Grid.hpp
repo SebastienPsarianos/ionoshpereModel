@@ -1,75 +1,87 @@
 #pragma once
 #include <iostream>
-#include <map>
 #include <optional>
 #include <vector>
 
-enum class Coords { TH, PH, COUNT };
-enum class Ang { TH, PH, COUNT };
-enum class Cart { X, Y, Z, COUNT };
-enum class Sigma { THTH, THPH, PHPH, COUNT };
-enum class DSigma { DTHTH_TH, DTHPH_PH, DTHPH_TH, DPHPH_PH, COUNT };
-enum class HppSigma { HALL, PEDERSON, PARALLEL, COUNT };
-enum class Coeff { THTH, PHPH, TH, PH, COUNT };
+struct {
+    double th;
+    double ph;
+} typedef ThPh;
 
 struct {
-    double value;
-    double th_val;
-    double ph_val;
-} typedef GridVal;
+    double x;
+    double y;
+    double z;
+} typedef CartVector;
 
-template <typename E>
-concept ValidEnum = std::is_same_v<E, Coords> || std::is_same_v<E, Sigma> ||
-                    std::is_same_v<E, DSigma> || std::is_same_v<E, HppSigma> ||
-                    std::is_same_v<E, Ang> || std::is_same_v<E, Cart> ||
-                    std::is_same_v<E, Coeff>;
+struct {
+    double thth;
+    double thph;
+    double phph;
+} typedef Sigma;
 
-template <ValidEnum T> class GridSet;
+struct {
+    double hall;
+    double pederson;
+    double parallel;
+} typedef HppSigma;
 
-class Grid {
+struct {
+    double dthth_th;
+    double dthph_ph;
+    double dthph_th;
+    double dphph_ph;
+} typedef DSigma;
+
+struct {
+    double thth;
+    double phph;
+    double th;
+    double ph;
+} typedef Coeff;
+
+template <typename T>
+concept ValidStruct =
+    std::is_same_v<T, ThPh> || std::is_same_v<T, CartVector> ||
+    std::is_same_v<T, Sigma> || std::is_same_v<T, HppSigma> ||
+    std::is_same_v<T, DSigma> || std::is_same_v<T, Coeff> ||
+    std::is_same_v<T, double>;
+
+template <typename T> class Grid {
   public:
-    Grid(size_t nTh, size_t nPh, double initialValue);
-    double& operator()(size_t th, size_t ph);
-    std::ostream& printWithCoords(std::ostream& out, GridSet<Ang>& coords);
-
-    friend std::ostream& operator<<(std::ostream& outs, const Grid& g) {
-        for (size_t th = 0; th < g.nTh; th++) {
-            for (size_t ph = 0; ph < g.nPh; ph++) {
-                outs << g._grid.at(th * g.nPh + ph);
-                outs << ", ";
-            }
-            outs << "\n";
-        }
-
-        return outs;
-    }
+    Grid(size_t nTh, size_t nPh, std::optional<T> initialValue = std::nullopt);
+    T& operator()(size_t th, size_t ph);
+    const T& operator()(size_t th, size_t ph) const;
+    std::ostream& printWithCoords(std::ostream& out, const Grid<ThPh>& coords);
 
     size_t nTh;
     size_t nPh;
 
   private:
-    std::vector<double> _grid;
+    std::vector<T> _grid;
 };
 
-template <ValidEnum T> class GridSet {
-  public:
-    GridSet(size_t nTh, size_t nPh,
-            std::optional<std::map<T, double>> initialValues = std::nullopt);
-    double& operator()(T idx, unsigned int th, unsigned int ph);
-    std::ostream& printWithCoords(std::ostream& out, GridSet<Ang>& coords);
+inline std::ostream& operator<<(std::ostream& out, const ThPh& s) {
+    return out << s.th << " " << s.ph;
+}
 
-    friend std::ostream& operator<<(std::ostream& outs, const GridSet<T>& gs) {
-        for (int grid = 0; grid < static_cast<int>(T::COUNT); grid++) {
-            T test = static_cast<T>(grid);
-            outs << gs._grids.at(test);
-            outs << "\n";
-        }
-        return outs;
-    }
+inline std::ostream& operator<<(std::ostream& out, const CartVector& s) {
+    return out << s.x << " " << s.y << " " << s.z;
+}
 
-    size_t nTh;
-    size_t nPh;
+inline std::ostream& operator<<(std::ostream& out, const Sigma& s) {
+    return out << s.thth << " " << s.thph << " " << s.phph;
+}
 
-  private:
-    std::map<T, Grid> _grids;
-};
+inline std::ostream& operator<<(std::ostream& out, const HppSigma& s) {
+    return out << s.hall << " " << s.pederson << " " << s.parallel;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const DSigma& s) {
+    return out << s.dthth_th << " " << s.dthph_ph << " " << s.dthph_th << " "
+               << s.dphph_ph;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const Coeff& s) {
+    return out << s.thth << " " << s.phph << " " << s.th << " " << s.ph;
+}

@@ -17,48 +17,54 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    int nTh = 0;
-    int nPh = 0;
+    int nTh = -1;
+    int nPh = -1;
 
-    LegacyMHDConversion::getGridSize(argv[1], &nTh, &nPh);
-
+    int gridSizeRes = LegacyMHDConversion::getGridSize(argv[1], &nTh, &nPh);
+    if (gridSizeRes > 0 || nTh <= 0 || nPh <= 0) {
+        std::cerr << "Error reading file ending execution" << std::endl;
+        return 1;
+    }
     std::cout << "Sucessfully able to open radial current data, (" << nTh
               << ", " << nPh << ") grid detected" << std::endl;
 
-    std::shared_ptr<GridSet<Ang>> coords =
-        std::make_shared<GridSet<Ang>>(nTh, nPh);
-    std::shared_ptr<Grid> radCurrent = std::make_shared<Grid>(nTh, nPh, 0.0);
+    // creating required grids
+    Grid<ThPh> coords = Grid<ThPh>(nTh, nPh);
+    Grid<double> radCurrent = Grid<double>(nTh, nPh, 0.0);
+    Grid<Coeff> kappa = Grid<Coeff>(nTh, nPh);
+    Grid<double> potential = Grid<double>(nTh, nPh, 0.0);
+    Grid<ThPh> eField = Grid<ThPh>(nTh, nPh);
 
-    LegacyMHDConversion::processLegacyOutput(std::string(argv[1]), coords,
-                                             radCurrent, nTh, nPh);
+    int processRes = LegacyMHDConversion::processLegacyOutput(
+        std::string(argv[1]), coords, radCurrent, nTh, nPh);
 
-    std::cout << "PRINTING" << std::endl;
-    std::ofstream out("../data/new_radCurrent.txt");
-    if (out.is_open()) {
-        std::cout << " OPEN" << std::endl;
-        radCurrent->printWithCoords(out, *coords);
+    if (processRes > 0) {
+        std::cerr << "Failed to process simulation input data" << std::endl;
+        return 1;
     }
 
-    return 0;
+    // Calculate the conductance
+    Conductance(kappa, nTh, nPh, SIG0, SIGP, SIGH, coords)
+        .calculateCoefficients();
 
-    Conductance conductance = Conductance(nTh, nPh, SIG0, SIGP, SIGH, coords);
-    std::shared_ptr<GridSet<Coeff>> kappa = conductance.calculateCoefficients();
+    // Calculate the potential
+    Solver(potential, nTh, nPh, kappa, coords, radCurrent, GAUSS_SEIDEL)
+        .calculatePotential();
 
-    Solver solver = Solver(nTh, nPh, kappa, coords, radCurrent, GAUSS_SEIDEL);
-    std::shared_ptr<Grid> potential = solver.calculatePotential();
-    std::shared_ptr<GridSet<Ang>> eField = calculateEField(potential, coords);
+    // Calculate the electric field
+    calculateEField(eField, potential, coords);
 
-    auto potentialOutput = std::ofstream("../data/solvedPotential.txt", 'w');
-    auto eFieldOutput = std::ofstream("../data/solvedEField.txt", 'w');
+    std::ofstream potentialOutput("../data/solvedPotential.txt");
+    std::ofstream eFieldOutput("../data/solvedEField.txt");
 
     if (potentialOutput.is_open()) {
-        potential->printWithCoords(potentialOutput, *coords);
+        potential.printWithCoords(potentialOutput, coords);
     } else {
         std::cerr << "Unable to open potential file" << std::endl;
     }
 
     if (eFieldOutput.is_open()) {
-        eField->printWithCoords(eFieldOutput, *coords);
+        eField.printWithCoords(eFieldOutput, coords);
     } else {
         std::cerr << "Unable to open eField file" << std::endl;
     }

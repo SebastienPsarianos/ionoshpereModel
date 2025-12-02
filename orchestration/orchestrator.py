@@ -7,8 +7,7 @@ LEGACY_LOCATION = "../legacySolution/src/"
 LEGACY_EXEC = "ionosphere.exe"
 DATA_FOLDER = "../ionosphereSimulation/data/"
 
-FILES = ["coords_out.txt",
-         "jr_out.txt",
+FILES = ["sim_input.txt",
          "sig_out.txt",
          "dsig_out.txt",
          "pot_out.txt",
@@ -16,8 +15,8 @@ FILES = ["coords_out.txt",
 
 
 def runProcesses():
-    subprocess.run(["make", "-C", LEGACY_LOCATION],
-                   stdout=subprocess.DEVNULL,
+    subprocess.run(["make"],
+                   cwd=LEGACY_LOCATION,
                    check=True)
 
     if not os.path.exists(LEGACY_LOCATION + LEGACY_EXEC):
