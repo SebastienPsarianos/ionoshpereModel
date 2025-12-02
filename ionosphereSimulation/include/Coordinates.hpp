@@ -2,5 +2,5 @@
 
 class Coordinates {
   public:
-    static void calculateCoords(GridSet<Coords>& coordinates);
+    static void calculateCoords(Grid<ThPh>& coordinates);
 };

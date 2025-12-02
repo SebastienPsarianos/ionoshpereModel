@@ -1,30 +1,27 @@
 #pragma once
-
 #include "Grid.hpp"
-#include <memory>
 
 enum Algorithm { GAUSS_SEIDEL, JACOBI, SOR };
 
 class Solver {
   public:
-    Solver(size_t nTh, size_t nPh, std::shared_ptr<GridSet<Coeff>> kappa,
-           std::shared_ptr<GridSet<Ang>> coords,
-           std::shared_ptr<Grid> radCurrent, Algorithm algorithm);
-    std::shared_ptr<Grid> calculatePotential();
+    Solver(Grid<double>& potential, size_t nTh, size_t nPh, Grid<Coeff>& kappa,
+           Grid<ThPh>& coords, Grid<double>& radCurrent, Algorithm algorithm);
+    void calculatePotential();
 
   private:
-    size_t nTh;
-    size_t nPh;
-    double dTh;
-    double dPh;
-    double dTh2;
-    double dPh2;
-    std::shared_ptr<Grid> radCurrent;
-    std::shared_ptr<GridSet<Ang>> coords;
-    std::shared_ptr<GridSet<Coeff>> kappa;
-    std::shared_ptr<Grid> potential;
-    Algorithm algorithm;
-    Grid previousIteration;
+    size_t _nTh;
+    size_t _nPh;
+    double _dTh;
+    double _dPh;
+    double _dTh2;
+    double _dPh2;
+
+    Grid<double>& _radCurrent;
+    Grid<ThPh>& _coords;
+    Grid<Coeff>& _kappa;
+    Grid<double>& _potential;
+    Algorithm _algorithm;
 
     double _gaussSeidelFormula(size_t th, size_t ph);
     double _calculateResidual();
