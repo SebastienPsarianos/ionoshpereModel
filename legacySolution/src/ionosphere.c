@@ -225,13 +225,12 @@ int main() {
   for (i = 1; i <= IONOSPHERE_numberofnodes; i++) {
     for (j = 1; j <= nnodes; j++) {
       fprintf(simulation_input, "%g %g %g\n", Theta[i][j], Psi[i][j], JR[i][j]);
-      fprintf(sig_out, "%g %g %g\n", SigmaThTh[i][j], SigmaThPs[i][j],
-              SigmaPsPs[i][j]);
-      fprintf(dsig_out, "%g %g %g %g %g %g\n", dSigmaThTh_dTheta[i][j],
-              dSigmaThPs_dTheta[i][j], dSigmaPsPs_dTheta[i][j],
-              dSigmaThTh_dPsi[i][j], dSigmaThPs_dPsi[i][j],
-              dSigmaPsPs_dPsi[i][j]);
-      fprintf(pot_out, "%g\n", PHI[i][j]);
+      fprintf(sig_out, "%g %g %g %g %g\n", Theta[i][j], Psi[i][j],
+              SigmaThTh[i][j], SigmaThPs[i][j], SigmaPsPs[i][j]);
+      fprintf(dsig_out, "%g %g %g %g %g %g \n", Theta[i][j], Psi[i][j],
+              dSigmaThTh_dTheta[i][j], dSigmaThPs_dPsi[i][j],
+              dSigmaThPs_dTheta[i][j], dSigmaPsPs_dPsi[i][j]);
+      fprintf(pot_out, "%g %g %g\n", Theta[i][j], Psi[i][j], PHI[i][j]);
       fprintf(e_out, "%g %g\n", ETh[i][j], EPs[i][j]);
     }
   }

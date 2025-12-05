@@ -2,20 +2,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 import os
+import math
 
 
-def plot_heatmap_simple(filename):
-    """
-    Reads coordinate and potential data from a file and plots a 2D heatmap.
+def plot_heatmap_multiple(filename):
+    """ 
+    Reads coordinate and potential data from a file and plots 2D heatmaps.
+    Detects multiple value columns and creates subplots for each.
     """
     # 1. Load the data
     try:
-        # Check if the file exists before attempting to load
         if not os.path.exists(filename):
-            print(f"Error: Could not find the file '{
-                  filename}'. Please check the path.")
+            print(f"Error: Could not find the file '{filename}'.")
             return
-
         data = np.loadtxt(filename)
     except Exception as e:
         print(f"Error loading file '{filename}': {e}")
@@ -26,17 +25,26 @@ def plot_heatmap_simple(filename):
         print("Error: The data file is empty.")
         return
 
-    # If the file has only one point, it loads as a 1D array of shape (3,).
-    # We explicitly check for the expected number of dimensions.
-    if data.ndim == 1 and data.size != 0:
-        print("Error: Data file only has one line. Need a full grid of data.")
-        return
+    # Ensure 2D array even if single line
+    if data.ndim == 1:
+        data = data.reshape(1, -1)
 
-    # 3. Extract columns: Theta (col 0), Phi (col 1), Value (col 2)
-    # The previous IndexError is now avoided by the safety checks above.
+    # 3. Extract Coordinates and Values
+    # Theta is col 0, Phi is col 1.
+    # Everything from col 2 onwards are considered values to plot.
     theta_flat = data[:, 0]
     phi_flat = data[:, 1]
-    values_flat = data[:, 2]
+
+    # This selects all columns from index 2 to the end
+    values_data = data[:, 2:]
+
+    num_data_points, num_value_cols = values_data.shape
+
+    if num_value_cols == 0:
+        print("Error: File contains coordinates but no value columns.")
+        return
+
+    print(f"Found {num_value_cols} value column(s) to plot.")
 
     # 4. Auto-detect Grid Dimensions
     unique_theta = np.unique(theta_flat)
@@ -46,56 +54,79 @@ def plot_heatmap_simple(filename):
     n_ph = len(unique_phi)
 
     print(f"Detected Grid: nTh={n_th}, nPh={
-          n_ph} (Total points: {len(values_flat)})")
+          n_ph} (Total rows: {num_data_points})")
 
-    if n_th * n_ph != len(values_flat):
-        print("Error: Grid dimensions do not match the number of data points. Data may be irregular or corrupted.")
+    if n_th * n_ph != num_data_points:
+        print("Error: Grid dimensions do not match the number of data points.")
         return
 
-    # 5. Reshape Data for Plotting
-    Z = values_flat.reshape((n_th, n_ph))
-
-    # Create 2D grid for axes (converted to degrees for readability)
+    # Create Meshgrid for plotting (converted to degrees)
+    # We create this once, as it applies to all subplots
     Phi_grid, Theta_grid = np.meshgrid(
         np.degrees(unique_phi), np.degrees(unique_theta))
 
-    # 6. Plot
-    plt.figure(figsize=(10, 6))
+    # 5. Setup Dynamic Subplots
+    # Determine how many rows/cols for the figure based on num_value_cols
+    # We max out at 3 columns wide to keep it readable
+    cols_per_row = 3
+    n_cols_plot = min(num_value_cols, cols_per_row)
+    n_rows_plot = math.ceil(num_value_cols / n_cols_plot)
 
-    cp = plt.pcolormesh(Phi_grid, Theta_grid, Z,
-                        shading='auto', cmap='viridis')
+    fig, axes = plt.subplots(n_rows_plot, n_cols_plot,
+                             figsize=(5 * n_cols_plot, 4 * n_rows_plot),
+                             constrained_layout=True)
 
-    cbar = plt.colorbar(cp)
-    cbar.set_label('Potential (V)')
+    # If there is only 1 plot, axes is not a list, so we wrap it
+    if num_value_cols == 1:
+        axes_flat = [axes]
+    else:
+        axes_flat = axes.flatten()
 
-    plt.xlabel('Phi (Longitude) [Degrees]')
-    plt.ylabel('Theta (Latitude) [Degrees]')
-    plt.title(f'Potential Heatmap from {os.path.basename(filename)}')
+    # 6. Loop through value columns and plot
+    for i in range(num_value_cols):
+        ax = axes_flat[i]
 
-    # Invert Y axis so Theta=0 (North Pole) is at the top
-    plt.gca().invert_yaxis()
+        # Extract current column and reshape
+        current_val_flat = values_data[:, i]
+        Z = current_val_flat.reshape((n_th, n_ph))
 
-    plt.tight_layout()
+        # Plot Heatmap
+        cp = ax.pcolormesh(Phi_grid, Theta_grid, Z,
+                           shading='auto', cmap='viridis')
+
+        # Add colorbar specific to this subplot
+        cbar = plt.colorbar(cp, ax=ax)
+        cbar.set_label(f'Value (Col {i+2})')
+
+        # Formatting
+        ax.set_title(f'Column {i+2}')
+        ax.set_xlabel('Phi (deg)')
+        ax.set_ylabel('Theta (deg)')
+        ax.invert_yaxis()  # North pole at top
+
+    # Hide any unused subplots (if grid is larger than number of plots)
+    for j in range(num_value_cols, len(axes_flat)):
+        axes_flat[j].axis('off')
+
+    fig.suptitle(f'Data Visualization: {
+                 os.path.basename(filename)}', fontsize=16)
     plt.show()
 
+
 # --- Command Line Argument Handling ---
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Plot a 2D heatmap from coordinate data generated by C++ printWithCoords.",
+        description="Plot 2D heatmaps for all value columns in a file.",
         formatter_class=argparse.RawTextHelpFormatter
     )
 
-    # Define the -i flag for input file
     parser.add_argument(
         '-i', '--input',
         type=str,
-        default='../data/solvedPotential.txt',  # Default path if flag is omitted
-        help='Path to the input file containing theta, phi, and potential data.'
+        default='../data/solvedPotential.txt',
+        help='Path to the input file.'
     )
 
     args = parser.parse_args()
 
-    # Run the plotting function with the provided file path
-    plot_heatmap_simple(args.input)
+    plot_heatmap_multiple(args.input)
