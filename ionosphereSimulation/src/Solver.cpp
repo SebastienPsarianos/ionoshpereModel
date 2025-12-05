@@ -109,7 +109,7 @@ double Solver::_gaussSeidelFormula(size_t th, size_t ph) {
 
             (_kappa(th, ph).ph / (2 * _dPh)) *
                 (_potential(th, right) - _potential(th, ph - 1)) -
-            sin2 * RADIUS_EARTH * _radCurrent(th, ph)) /
+            sin2 * RADIUS_EARTH_2 * _radCurrent(th, ph)) /
 
            ((2 * _kappa(th, ph).thth) / _dTh2 +
             (2 * _kappa(th, ph).phph) / _dPh2);
@@ -124,7 +124,7 @@ double Solver::_calculateResidual() {
             size_t right = ph == _nPh - 1 ? 1 : ph + 1;
             double sin = std::sin(_coords(th, ph).th);
             double sin2 = sin * sin;
-            norm += std::abs(sin2 * RADIUS_EARTH * _radCurrent(th, ph));
+            norm += std::abs(sin2 * RADIUS_EARTH_2 * _radCurrent(th, ph));
             res +=
                 std::abs((_kappa(th, ph).thth / _dTh2) *
                              (_potential(th + 1, ph) - 2 * _potential(th, ph) +
@@ -136,7 +136,7 @@ double Solver::_calculateResidual() {
                              (_potential(th + 1, ph) - _potential(th - 1, ph)) +
                          (_kappa(th, ph).ph / (2 * _dPh)) *
                              (_potential(th, right) - _potential(th, ph - 1)) -
-                         sin2 * RADIUS_EARTH * _radCurrent(th, ph));
+                         sin2 * RADIUS_EARTH_2 * _radCurrent(th, ph));
         }
     }
     if (norm == 0)

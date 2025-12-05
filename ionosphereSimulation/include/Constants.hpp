@@ -5,4 +5,5 @@
 
 #define IONOSPHERE_Radius_Earth 6378000.00
 #define IONOSPHERE_Height_Earth 400000.00
-#define RADIUS_EARTH IONOSPHERE_Height_Earth + IONOSPHERE_Radius_Earth
+#define RADIUS_EARTH (IONOSPHERE_Height_Earth + IONOSPHERE_Radius_Earth)
+#define RADIUS_EARTH_2 (RADIUS_EARTH * RADIUS_EARTH)
