@@ -57,10 +57,10 @@ void Conductance::_calcSigmaDer() {
 
     // TODO: Theta boundary conditions
     for (size_t th = 1; th < _nTh - 1; th++) {
-        // Boundary points for phi should be continuous
-        // and wrap around to the start of the phi grid.
-        // So we calculate based on the adjacent left point (_nPh - 2)
-        // Then we set the end of the grid to be equal to the start
+        // NOTE: Boundary points for phi should be continuous
+        //      and wrap around to the start of the phi grid.
+        //     Boundary points (phi = 0 and phi = _nPh - 1) are
+        //      calculated first using conductances in ph = nPh-2 and 1
         _dSigma(th, 0).dthph_ph =
             (_sigma(th, 1).thph - _sigma(th, _nPh - 2).thph) / (2 * dPh);
         _dSigma(th, _nPh - 1).dthph_ph = _dSigma(th, 0).dthph_ph;
