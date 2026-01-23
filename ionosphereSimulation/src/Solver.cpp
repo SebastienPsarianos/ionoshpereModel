@@ -7,9 +7,10 @@
 
 Solver::Solver(Grid<double>& potential, size_t nTh, size_t nPh,
                Grid<Coeff>& kappa, Grid<ThPh>& coords, Grid<double>& radCurrent,
-               Algorithm algorithm)
+               Grid<Sigma>& conductance, Algorithm algorithm)
     : _nTh(nTh), _nPh(nPh), _radCurrent(radCurrent), _coords(coords),
-      _kappa(kappa), _potential(potential), _algorithm(algorithm) {
+      _kappa(kappa), _potential(potential), _conductance(conductance),
+      _algorithm(algorithm) {
 
     // Initial guess
     for (size_t th = 1; th < _nTh - 1; th++) {
@@ -30,7 +31,7 @@ Solver::Solver(Grid<double>& potential, size_t nTh, size_t nPh,
 void Solver::calculatePotential() {
     // NOTE: Boundary conditions:
     // 1. u(0,Phi) = 0
-    // 2. u(PI,Phi) = 0
+    // 2. u(Pi,Phi) = u(Pi-dTh, Phi) + dTh * J_r(Pi, Phi) / SigmaThTH(Pi, Phi) ?
     // 3. u(Theta,0) = u(Theta,2*PI)
     // - 1,2 are already enforced by the inital value of the grid.
     //      Therefore, the 0 and _nTh-1 indices are not updated by the solver
@@ -64,6 +65,14 @@ void Solver::calculatePotential() {
                     gridNorm += std::abs(uNew);
                 }
                 _potential(th, 0) = _potential(th, _nPh - 1);
+            }
+
+            // NOTE: Enforce theta boundary condition. (other pole is enforced
+            // by initial grid value)
+            for (size_t ph = 0; ph < _nPh; ph++) {
+                _potential(_nTh - 1, ph) = _potential(_nTh - 2, ph) +
+                                           _dTh * _radCurrent(_nTh - 1, ph) /
+                                               _conductance(_nTh - 1, ph).thth;
             }
 
             gridNorm = gridNorm / (_nPh * _nTh);

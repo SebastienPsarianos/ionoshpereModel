@@ -32,6 +32,7 @@ int main(int argc, char* argv[]) {
     Grid<ThPh> coords = Grid<ThPh>(nTh, nPh);
     Grid<double> radCurrent = Grid<double>(nTh, nPh, 0.0);
     Grid<Coeff> kappa = Grid<Coeff>(nTh, nPh);
+    Grid<Sigma> conductance = Grid<Sigma>(nTh, nPh);
     Grid<double> potential = Grid<double>(nTh, nPh, 0.0);
     Grid<ThPh> eField = Grid<ThPh>(nTh, nPh);
 
@@ -43,12 +44,16 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Calculate the conductance
-    Conductance(kappa, nTh, nPh, SIG0, SIGP, SIGH, coords)
+    // Calculate the coefficients
+    Conductance(kappa, conductance, nTh, nPh, SIG0, SIGP, SIGH, coords)
         .calculateCoefficients();
 
+    // TODO: Calculate the whole source term here so we don't need to
+    // recalculate in gauss seidel
+
     // Calculate the potential
-    Solver(potential, nTh, nPh, kappa, coords, radCurrent, GAUSS_SEIDEL)
+    Solver(potential, nTh, nPh, kappa, coords, radCurrent, conductance,
+           GAUSS_SEIDEL)
         .calculatePotential();
 
     // Calculate the electric field

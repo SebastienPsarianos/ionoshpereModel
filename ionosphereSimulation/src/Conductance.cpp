@@ -3,13 +3,13 @@
 #include <cmath>
 #include <fstream>
 
-Conductance::Conductance(Grid<Coeff>& kappa, size_t nTh, size_t nPh,
-                         double sig0, double sigP, double sigH,
+Conductance::Conductance(Grid<Coeff>& kappa, Grid<Sigma>& sigma, size_t nTh,
+                         size_t nPh, double sig0, double sigP, double sigH,
                          Grid<ThPh>& coords)
-    : _nTh(nTh), _nPh(nPh), _coords(coords), _sigma(nTh, nPh),
+    : _nTh(nTh), _nPh(nPh), _coords(coords), _sigma(sigma), _kappa(kappa),
       _hppSigma(nTh, nPh,
                 HppSigma{.hall = sigH, .pederson = sigP, .parallel = sig0}),
-      _dSigma(nTh, nPh), _kappa(kappa) {}
+      _dSigma(nTh, nPh) {}
 
 void Conductance::calculateCoefficients() {
     _calcSigma();
@@ -55,7 +55,7 @@ void Conductance::_calcSigmaDer() {
     const double dTh = _coords(1, 0).th - _coords(0, 0).th;
     const double dPh = _coords(0, 1).ph - _coords(0, 0).ph;
 
-    // TODO: Theta boundary conditions
+    // NOTE: The original code didn't set th at 0 or at nTh - 1
     for (size_t th = 1; th < _nTh - 1; th++) {
         // NOTE: Boundary points for phi should be continuous
         //      and wrap around to the start of the phi grid.

@@ -6,7 +6,8 @@ enum Algorithm { GAUSS_SEIDEL, JACOBI, SOR };
 class Solver {
   public:
     Solver(Grid<double>& potential, size_t nTh, size_t nPh, Grid<Coeff>& kappa,
-           Grid<ThPh>& coords, Grid<double>& radCurrent, Algorithm algorithm);
+           Grid<ThPh>& coords, Grid<double>& radCurrent,
+           Grid<Sigma>& conductance, Algorithm algorithm);
     void calculatePotential();
 
   private:
@@ -21,6 +22,7 @@ class Solver {
     Grid<ThPh>& _coords;
     Grid<Coeff>& _kappa;
     Grid<double>& _potential;
+    Grid<Sigma>& _conductance;
     Algorithm _algorithm;
 
     double _gaussSeidelFormula(size_t th, size_t ph);
