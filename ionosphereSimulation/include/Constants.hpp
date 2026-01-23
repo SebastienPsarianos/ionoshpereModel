@@ -1,6 +1,6 @@
 #pragma once
 
-#define MAX_ITERATION_NUM 100000
+#define MAX_ITERATION_NUM 1000000
 #define RES_THRESHOLD 1e-10
 
 #define IONOSPHERE_Radius_Earth 6378000.00
