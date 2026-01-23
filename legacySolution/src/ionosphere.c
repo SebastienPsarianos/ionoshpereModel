@@ -212,7 +212,7 @@ int main() {
                     Thetamag, Psimag, Xmag, Ymag, Zmag, nmag, InMagTri,
                     MagTriNode1, MagTriNode2, MagTriNode3, ntrimag);
 
-  // NOTE: This is added to grab data for new simulation
+  /* NOTE: This is added to grab data for new simulation */
   FILE *simulation_input = fopen("./sim_input.txt", "w");
   FILE *sig_out = fopen("./sig_out.txt", "w");
   FILE *dsig_out = fopen("./dsig_out.txt", "w");
@@ -249,7 +249,7 @@ int main() {
   printf("\n Generate Tecplot output file.......");
   iout = 1;
 
-  // 9
+  /* 9 */
   nhemi = (IONOSPHERE_numberofnodes - 1) / 2 + 1;
   if (iout == 1) {
     IONOSPHERE_copy("ionosphere.dat", file_name);

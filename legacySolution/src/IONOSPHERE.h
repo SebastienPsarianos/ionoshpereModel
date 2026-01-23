@@ -4,7 +4,7 @@
 
 /* Use the preprocessor to define various constants and data. */
 
-#define IONOSPHERE_numberofnodes 129
+#define IONOSPHERE_numberofnodes 33
 
 #define IONOSPHERE_Radius_Earth 6378000.00
 #define IONOSPHERE_Height_Earth 400000.00

@@ -31,7 +31,7 @@ LIB = -lm
 EXE1 = mglin.exe
 EXE2 = mgfas.exe
 EXE3 = ionosphere.exe
-CC = gcc -g 
+CC = gcc -g -std=c89 
 BIND = gcc
 CPU = 
 OPT = -O
