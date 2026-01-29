@@ -53,8 +53,8 @@ def plot_heatmap_multiple(filename):
     n_th = len(unique_theta)
     n_ph = len(unique_phi)
 
-    print(f"Detected Grid: nTh={n_th}, nPh={
-          n_ph} (Total rows: {num_data_points})")
+    print(
+        f"Detected Grid: nTh={n_th}, nPh={n_ph}(Total rows: {num_data_points})")
 
     if n_th * n_ph != num_data_points:
         print("Error: Grid dimensions do not match the number of data points.")
@@ -108,8 +108,8 @@ def plot_heatmap_multiple(filename):
     for j in range(num_value_cols, len(axes_flat)):
         axes_flat[j].axis('off')
 
-    fig.suptitle(f'Data Visualization: {
-                 os.path.basename(filename)}', fontsize=16)
+    fig.suptitle(
+        f'Data Visualization: {os.path.basename(filename)}', fontsize=16)
     plt.show()
 
 

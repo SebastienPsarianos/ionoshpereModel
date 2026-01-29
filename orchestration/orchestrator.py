@@ -28,7 +28,7 @@ def cleanup():
 
 
 def runProcesses():
-    subprocess.run(["make"],
+    subprocess.run(["make", "ionosphere"],
                    cwd=LEGACY_LOCATION,
                    stdout=subprocess.DEVNULL,
                    check=True)
