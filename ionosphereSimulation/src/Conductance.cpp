@@ -60,7 +60,7 @@ void Conductance::_calcSigmaDer() {
         // NOTE: Boundary points for phi should be continuous
         //      and wrap around to the start of the phi grid.
         //     Boundary points (phi = 0 and phi = _nPh - 1) are
-        //      calculated first using conductances in ph = nPh-2 and 1
+        //      calculated as derrivatives between phi = 1 and nPh-2
         _dSigma(th, 0).dthph_ph =
             (_sigma(th, 1).thph - _sigma(th, _nPh - 2).thph) / (2 * dPh);
         _dSigma(th, _nPh - 1).dthph_ph = _dSigma(th, 0).dthph_ph;
@@ -69,12 +69,15 @@ void Conductance::_calcSigmaDer() {
             (_sigma(th, 1).phph - _sigma(th, _nPh - 2).phph) / (2 * dPh);
         _dSigma(th, _nPh - 1).dphph_ph = _dSigma(th, 0).dphph_ph;
 
-        // For the derivatives in the theta direction, we can calculate normally
+        // We also set the th derivatives to be equal accross the circular
+        // boundary
         _dSigma(th, 0).dthth_th =
             (_sigma(th + 1, 0).thth - _sigma(th - 1, 0).thth) / (2 * dTh);
+        _dSigma(th, _nPh - 1).dthth_th = _dSigma(th, 0).dthth_th;
 
         _dSigma(th, 0).dthph_th =
             (_sigma(th + 1, 0).thph - _sigma(th - 1, 0).thph) / (2 * dTh);
+        _dSigma(th, _nPh - 1).dthph_th = _dSigma(th, 0).dthph_th;
 
         for (size_t ph = 1; ph < _nPh - 1; ph++) {
             _dSigma(th, ph).dthth_th =
