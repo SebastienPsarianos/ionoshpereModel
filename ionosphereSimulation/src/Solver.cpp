@@ -68,10 +68,16 @@ void Solver::calculatePotential() {
             }
 
             // NOTE: Enforce theta boundary condition. (other pole is enforced
-            // by initial grid value)
+            // by initial grid value). Need to determine
+            //   1. Is the sin even required since (sin(pi) = 0)
+            //   2. Why are we using this boundary condition?
             for (size_t ph = 0; ph < _nPh; ph++) {
+                double sin2 = std::sin(_coords(_nTh - 1, ph).th) *
+                              std::sin(_coords(_nTh - 1, ph).th);
+
                 _potential(_nTh - 1, ph) = _potential(_nTh - 2, ph) +
-                                           _dTh * _radCurrent(_nTh - 1, ph) /
+                                           _dTh * _radCurrent(_nTh - 1, ph) *
+                                               sin2 * RADIUS_EARTH_2 /
                                                _conductance(_nTh - 1, ph).thth;
             }
 
@@ -102,7 +108,8 @@ double Solver::_gaussSeidelFormula(size_t th, size_t ph) {
         throw new std::out_of_range(
             "potential should not be calculated directly at ph = 0");
     }
-    // TODO: Implement system to calculate unchanging values only once
+    // TODO: Figure out if it would be useful to calculate these values only
+    // once
     size_t right = ph == _nPh - 1 ? 1 : ph + 1;
     double sin = std::sin(_coords(th, ph).th);
     double sin2 = sin * sin;
