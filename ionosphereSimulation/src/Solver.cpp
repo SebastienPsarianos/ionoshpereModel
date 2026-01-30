@@ -3,7 +3,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
-#include <stdexcept>
 
 Solver::Solver(Grid<double>& potential, size_t nTh, size_t nPh,
                Grid<Coeff>& kappa, Grid<ThPh>& coords, Grid<double>& radCurrent,
@@ -31,7 +30,8 @@ Solver::Solver(Grid<double>& potential, size_t nTh, size_t nPh,
 void Solver::calculatePotential() {
     // NOTE: Boundary conditions:
     // 1. u(0,Phi) = 0
-    // 2. u(Pi,Phi) = u(Pi-dTh, Phi) + dTh * J_r(Pi, Phi) / SigmaThTH(Pi, Phi) ?
+    // 2. u(Pi,Phi) = u(Pi-dTh, Phi) + dTh * J_r(Pi, Phi) * sin2(Pi) * R^2 /
+    // SigmaThTH(Pi, Phi)
     // 3. u(Theta,0) = u(Theta,2*PI)
     // - 1,2 are already enforced by the inital value of the grid.
     //      Therefore, the 0 and _nTh-1 indices are not updated by the solver
@@ -51,9 +51,26 @@ void Solver::calculatePotential() {
             gridDiff = 0;
             maxDiff = 0;
             gridNorm = 0;
+
+            // NOTE: Enforce theta boundary conditions.  Need to determine
+            //          1. Is the sin even required since (sin(pi) = 0)
+            //          2. Why are we using this boundary condition?
+            for (size_t ph = 0; ph < _nPh; ph++) {
+                double sin2 = std::sin(_coords(_nTh - 1, ph).th) *
+                              std::sin(_coords(_nTh - 1, ph).th);
+
+                _potential(_nTh - 1, ph) = _potential(_nTh - 2, ph) +
+                                           _dTh * _radCurrent(_nTh - 1, ph) *
+                                               sin2 * RADIUS_EARTH_2 /
+                                               _conductance(_nTh - 1, ph).thth;
+
+                // TODO: Don't do this every itteration
+                _potential(0, ph) = 0;
+            }
+
             // Red black ordering
             for (size_t th = 1; th < _nTh - 1; th++) {
-                for (size_t ph = 1 + (itt + th) % 2; ph < _nPh; ph = ph + 2) {
+                for (size_t ph = (itt + th) % 2; ph < _nPh; ph = ph + 2) {
                     uOld = _potential(th, ph);
                     uNew = _gaussSeidelFormula(th, ph);
 
@@ -64,21 +81,6 @@ void Solver::calculatePotential() {
 
                     gridNorm += std::abs(uNew);
                 }
-                _potential(th, 0) = _potential(th, _nPh - 1);
-            }
-
-            // NOTE: Enforce theta boundary condition. (other pole is enforced
-            // by initial grid value). Need to determine
-            //   1. Is the sin even required since (sin(pi) = 0)
-            //   2. Why are we using this boundary condition?
-            for (size_t ph = 0; ph < _nPh; ph++) {
-                double sin2 = std::sin(_coords(_nTh - 1, ph).th) *
-                              std::sin(_coords(_nTh - 1, ph).th);
-
-                _potential(_nTh - 1, ph) = _potential(_nTh - 2, ph) +
-                                           _dTh * _radCurrent(_nTh - 1, ph) *
-                                               sin2 * RADIUS_EARTH_2 /
-                                               _conductance(_nTh - 1, ph).thth;
             }
 
             gridNorm = gridNorm / (_nPh * _nTh);
@@ -98,19 +100,14 @@ void Solver::calculatePotential() {
 
 double Solver::_gaussSeidelFormula(size_t th, size_t ph) {
     // NOTE: Boundary conditions are enforced by calculating
-    //      the last potential in the sweep as wrapping around to the other
-    //      side of the grid. We do not calculate the first potential in the
-    //      sweep. The calling function is responsible for updating the
-    //      first potential to the value of the last potential and only
-    //      calculating one potential.
+    //      all potentials at ph = 0 and _nPh - 1 as functions of
+    //      ph = 1 and _nPh-2. This will ensure continuity in the solution.
 
-    if (ph == 0) {
-        throw new std::out_of_range(
-            "potential should not be calculated directly at ph = 0");
-    }
+    size_t right = ph == _nPh - 1 ? 1 : ph + 1;
+    size_t left = ph == 0 ? _nPh - 2 : ph - 1;
+
     // TODO: Figure out if it would be useful to calculate these values only
     // once
-    size_t right = ph == _nPh - 1 ? 1 : ph + 1;
     double sin = std::sin(_coords(th, ph).th);
     double sin2 = sin * sin;
 
@@ -118,13 +115,13 @@ double Solver::_gaussSeidelFormula(size_t th, size_t ph) {
                 (_potential(th + 1, ph) + _potential(th - 1, ph)) +
 
             (_kappa(th, ph).phph / _dPh2) *
-                (_potential(th, right) + _potential(th, ph - 1)) +
+                (_potential(th, right) + _potential(th, left)) +
 
             (_kappa(th, ph).th / (2 * _dTh)) *
                 (_potential(th + 1, ph) - _potential(th - 1, ph)) +
 
             (_kappa(th, ph).ph / (2 * _dPh)) *
-                (_potential(th, right) - _potential(th, ph - 1)) -
+                (_potential(th, right) - _potential(th, left)) -
             sin2 * RADIUS_EARTH_2 * _radCurrent(th, ph)) /
 
            ((2 * _kappa(th, ph).thth) / _dTh2 +
