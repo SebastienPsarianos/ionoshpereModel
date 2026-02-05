@@ -1,4 +1,4 @@
-#include <Grid.hpp>
+#include "ionosphere/utils/Grid.hpp"
 
 class Coordinates {
   public:

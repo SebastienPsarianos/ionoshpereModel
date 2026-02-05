@@ -1,5 +1,4 @@
-#include "Coordinates.hpp"
-#include <cmath>
+#include "ionosphere/utils/Coordinates.hpp"
 
 void Coordinates::calculateCoords(Grid<ThPh>& coordinates) {
     const size_t nTh = coordinates.nTh;
