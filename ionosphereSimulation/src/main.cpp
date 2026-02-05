@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
     Grid<double> potential = Grid<double>(nTh, nPh, 0.0);
     Grid<ThPh> eField = Grid<ThPh>(nTh, nPh);
 
-    // TODO:coupling procedure
+    // TODO: Coupling procedure
     int processRes = LegacyMHDConversion::processLegacyOutput(
         std::string(argv[1]), coords, radCurrent, nTh, nPh);
 
@@ -47,16 +47,15 @@ int main(int argc, char* argv[]) {
     }
 
     // TODO: Implement EUV + Auroral conductance model
-    Conductance(kappa, conductance, dConductance, nTh, nPh, SIG0, SIGP, SIGH,
-                coords)
+    Conductance(conductance, dConductance, nTh, nPh, SIG0, SIGP, SIGH, coords)
         .calculateCoefficients();
 
-    // Calculate the potential
+    // TODO: Implement trilinos solver
     Solver(potential, nTh, nPh, coords, kappa, radCurrent, conductance,
            dConductance, GAUSS_SEIDEL)
         .calculatePotential();
 
-    // Calculate the electric field
+    // TODO: Proper post-processing, including J and others
     calculateEField(eField, potential, coords);
 
     std::ofstream potentialOutput("../data/solvedPotential.txt");
