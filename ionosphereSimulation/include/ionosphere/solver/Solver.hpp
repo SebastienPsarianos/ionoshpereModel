@@ -1,13 +1,14 @@
 #pragma once
-#include "Grid.hpp"
+#include "ionosphere/utils/Grid.hpp"
 
 enum Algorithm { GAUSS_SEIDEL, JACOBI, SOR };
 
 class Solver {
   public:
-    Solver(Grid<double>& potential, size_t nTh, size_t nPh, Grid<Coeff>& kappa,
-           Grid<ThPh>& coords, Grid<double>& radCurrent,
-           Grid<Sigma>& conductance, Algorithm algorithm);
+    Solver(Grid<double>& potential, size_t nTh, size_t nPh, Grid<ThPh>& coords,
+           Grid<Coeff>& kappa, Grid<double>& radCurrent,
+           Grid<Sigma>& conductance, Grid<DSigma>& dConductance,
+           Algorithm algorithm);
     void calculatePotential();
 
   private:
@@ -23,8 +24,10 @@ class Solver {
     Grid<Coeff>& _kappa;
     Grid<double>& _potential;
     Grid<Sigma>& _conductance;
+    Grid<DSigma>& _dConductance;
     Algorithm _algorithm;
 
     double _gaussSeidelFormula(size_t th, size_t ph);
     double _calculateResidual();
+    void _calcCoeff();
 };

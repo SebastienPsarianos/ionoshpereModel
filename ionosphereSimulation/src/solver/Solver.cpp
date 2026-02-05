@@ -1,15 +1,19 @@
-#include "Solver.hpp"
-#include "Constants.hpp"
+#include "ionosphere/solver/Solver.hpp"
+#include "ionosphere/Constants.hpp"
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
 
 Solver::Solver(Grid<double>& potential, size_t nTh, size_t nPh,
-               Grid<Coeff>& kappa, Grid<ThPh>& coords, Grid<double>& radCurrent,
-               Grid<Sigma>& conductance, Algorithm algorithm)
+               Grid<ThPh>& coords, Grid<Coeff>& kappa, Grid<double>& radCurrent,
+               Grid<Sigma>& conductance, Grid<DSigma>& dConductance,
+               Algorithm algorithm)
     : _nTh(nTh), _nPh(nPh), _radCurrent(radCurrent), _coords(coords),
       _kappa(kappa), _potential(potential), _conductance(conductance),
-      _algorithm(algorithm) {
+      _dConductance(dConductance), _algorithm(algorithm) {
+
+    // Set up the coefficient values
+    this->_calcCoeff();
 
     // Initial guess
     for (size_t th = 1; th < _nTh - 1; th++) {
@@ -155,4 +159,22 @@ double Solver::_calculateResidual() {
     if (norm == 0)
         return res;
     return res / norm;
+}
+
+void Solver::_calcCoeff() {
+    for (size_t th = 0; th < _nTh; th++) {
+        for (size_t ph = 0; ph < _nPh; ph++) {
+            double cos = std::cos(_coords(th, ph).th);
+            double sin = std::sin(_coords(th, ph).th);
+            double sin2 = std::pow(sin, 2);
+
+            _kappa(th, ph).thth = sin2 * _conductance(th, ph).thth;
+            _kappa(th, ph).phph = _conductance(th, ph).phph;
+            _kappa(th, ph).th = sin2 * _dConductance(th, ph).dthth_th +
+                                sin * cos * _conductance(th, ph).thth -
+                                sin * _dConductance(th, ph).dthph_ph;
+            _kappa(th, ph).ph = sin * _dConductance(th, ph).dthph_th +
+                                _dConductance(th, ph).dphph_ph;
+        }
+    }
 }

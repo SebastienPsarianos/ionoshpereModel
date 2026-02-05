@@ -1,29 +1,17 @@
-#include "Conductance.hpp"
-#include "Grid.hpp"
-#include <cmath>
-#include <fstream>
+#include "ionosphere/conductance/Conductance.hpp"
+#include "ionosphere/utils/Grid.hpp"
 
-Conductance::Conductance(Grid<Coeff>& kappa, Grid<Sigma>& sigma, size_t nTh,
-                         size_t nPh, double sig0, double sigP, double sigH,
-                         Grid<ThPh>& coords)
-    : _nTh(nTh), _nPh(nPh), _coords(coords), _sigma(sigma), _kappa(kappa),
+Conductance::Conductance(Grid<Sigma>& sigma, Grid<DSigma>& dConductance,
+                         size_t nTh, size_t nPh, double sig0, double sigP,
+                         double sigH, Grid<ThPh>& coords)
+    : _nTh(nTh), _nPh(nPh), _coords(coords), _sigma(sigma),
       _hppSigma(nTh, nPh,
                 HppSigma{.hall = sigH, .pederson = sigP, .parallel = sig0}),
-      _dSigma(nTh, nPh) {}
+      _dSigma(dConductance) {}
 
 void Conductance::calculateCoefficients() {
     _calcSigma();
-    std::ofstream test("../data/conductance.txt");
-    _sigma.printWithCoords(test, _coords);
-    test.close();
     _calcSigmaDer();
-    std::ofstream dsigma("../data/dconductance.txt");
-    _dSigma.printWithCoords(dsigma, _coords);
-    dsigma.close();
-    _calcCoeff();
-    std::ofstream kappa("../data/kappa.txt");
-    _kappa.printWithCoords(kappa, _coords);
-    kappa.close();
 }
 
 void Conductance::_calcSigma() {
@@ -55,7 +43,7 @@ void Conductance::_calcSigmaDer() {
     const double dTh = _coords(1, 0).th - _coords(0, 0).th;
     const double dPh = _coords(0, 1).ph - _coords(0, 0).ph;
 
-    // NOTE: The original code didn't set th at 0 or at nTh - 1
+    // TODO: Figure out pole behaviour for th
     for (size_t th = 1; th < _nTh - 1; th++) {
         // NOTE: Boundary points for phi should be continuous
         //      and wrap around to the start of the phi grid.
@@ -91,24 +79,6 @@ void Conductance::_calcSigmaDer() {
 
             _dSigma(th, ph).dphph_ph =
                 (_sigma(th, ph + 1).phph - _sigma(th, ph - 1).phph) / (2 * dPh);
-        }
-    }
-}
-
-void Conductance::_calcCoeff() {
-    for (size_t th = 0; th < _nTh; th++) {
-        for (size_t ph = 0; ph < _nPh; ph++) {
-            double cos = std::cos(_coords(th, ph).th);
-            double sin = std::sin(_coords(th, ph).th);
-            double sin2 = std::pow(sin, 2);
-
-            _kappa(th, ph).thth = sin2 * _sigma(th, ph).thth;
-            _kappa(th, ph).phph = _sigma(th, ph).phph;
-            _kappa(th, ph).th = sin2 * _dSigma(th, ph).dthth_th +
-                                sin * cos * _sigma(th, ph).thth -
-                                sin * _dSigma(th, ph).dthph_ph;
-            _kappa(th, ph).ph =
-                sin * _dSigma(th, ph).dthph_th + _dSigma(th, ph).dphph_ph;
         }
     }
 }

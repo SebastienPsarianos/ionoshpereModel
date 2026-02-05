@@ -1,6 +1,6 @@
-#include "EField.hpp"
-#include "Constants.hpp"
-#include "Grid.hpp"
+#include "ionosphere/postProcessing/EField.hpp"
+#include "ionosphere/Constants.hpp"
+#include "ionosphere/utils/Grid.hpp"
 #include <cmath>
 
 void calculateEField(Grid<ThPh>& eField, Grid<double>& potential,

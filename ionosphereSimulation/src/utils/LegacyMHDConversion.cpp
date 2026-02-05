@@ -1,4 +1,4 @@
-#include "LegacyMHDConversion.hpp"
+#include "ionosphere/utils/LegacyMHDConversion.hpp"
 #include <fstream>
 #include <iostream>
 #include <stdexcept>

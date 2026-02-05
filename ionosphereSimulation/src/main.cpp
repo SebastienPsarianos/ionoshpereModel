@@ -1,9 +1,9 @@
-#include "Conductance.hpp"
-#include "Coordinates.hpp"
-#include "EField.hpp"
-#include "Grid.hpp"
-#include "LegacyMHDConversion.hpp"
-#include "Solver.hpp"
+#include "ionosphere/conductance/Conductance.hpp"
+#include "ionosphere/postProcessing/EField.hpp"
+#include "ionosphere/solver/Solver.hpp"
+#include "ionosphere/utils/Coordinates.hpp"
+#include "ionosphere/utils/Grid.hpp"
+#include "ionosphere/utils/LegacyMHDConversion.hpp"
 #include <fstream>
 #include <iostream>
 
@@ -33,9 +33,11 @@ int main(int argc, char* argv[]) {
     Grid<double> radCurrent = Grid<double>(nTh, nPh, 0.0);
     Grid<Coeff> kappa = Grid<Coeff>(nTh, nPh);
     Grid<Sigma> conductance = Grid<Sigma>(nTh, nPh);
+    Grid<DSigma> dConductance = Grid<DSigma>(nTh, nPh);
     Grid<double> potential = Grid<double>(nTh, nPh, 0.0);
     Grid<ThPh> eField = Grid<ThPh>(nTh, nPh);
 
+    // TODO:coupling procedure
     int processRes = LegacyMHDConversion::processLegacyOutput(
         std::string(argv[1]), coords, radCurrent, nTh, nPh);
 
@@ -44,16 +46,14 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Calculate the coefficients
-    Conductance(kappa, conductance, nTh, nPh, SIG0, SIGP, SIGH, coords)
+    // TODO: Implement EUV + Auroral conductance model
+    Conductance(kappa, conductance, dConductance, nTh, nPh, SIG0, SIGP, SIGH,
+                coords)
         .calculateCoefficients();
 
-    // TODO: Calculate the whole source term here so we don't need to
-    // recalculate in gauss seidel
-
     // Calculate the potential
-    Solver(potential, nTh, nPh, kappa, coords, radCurrent, conductance,
-           GAUSS_SEIDEL)
+    Solver(potential, nTh, nPh, coords, kappa, radCurrent, conductance,
+           dConductance, GAUSS_SEIDEL)
         .calculatePotential();
 
     // Calculate the electric field
