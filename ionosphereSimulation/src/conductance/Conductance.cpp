@@ -1,21 +1,60 @@
 #include "ionosphere/conductance/Conductance.hpp"
+#include "ionosphere/conductance/utils.hpp"
 #include "ionosphere/utils/Grid.hpp"
+#include <cmath>
+#include <exception>
+#include <fstream>
 
 Conductance::Conductance(Grid<Sigma>& sigma, Grid<DSigma>& dConductance,
-                         size_t nTh, size_t nPh, double sig0, double sigP,
-                         double sigH, Grid<ThPh>& coords)
-    : _nTh(nTh), _nPh(nPh), _coords(coords), _sigma(sigma),
-      _hppSigma(nTh, nPh,
-                HppSigma{.hall = sigH, .pederson = sigP, .parallel = sig0}),
-      _dSigma(dConductance) {}
+                         size_t nTh, size_t nPh, double sig0,
+                         Grid<ThPh>& coords, int year, int month, int day,
+                         int hour)
+    : _nTh(nTh), _nPh(nPh), _sig0(sig0), _coords(coords), _sigma(sigma),
+      _hppSigma(nTh, nPh), _dSigma(dConductance) {
+    computeGrenaTimescales(_utTime, _ttTime, year, month, day, hour);
+}
 
 void Conductance::calculateCoefficients() {
-    _calcSigma();
-    _calcSigmaDer();
+    // TODO: Set f107 dynamically
+    _euvConductance(175.9);
+
+    std::ofstream conductanceFile("../data/EUVConductance.txt");
+
+    if (!conductanceFile.is_open())
+        throw new std::exception();
+    _hppSigma.printWithCoords(conductanceFile, _coords);
+
+    conductanceFile.close();
+    //    _calcSigma();
+    //    _calcSigmaDer();
+}
+
+void Conductance::_euvConductance(double f107) {
+    using std::cos, std::sin, std::sqrt;
+    for (size_t th = 0; th < _nTh; th++) {
+        for (size_t ph = 0; ph < _nPh; ph++) {
+            // Compute Solar Zenith for this longitude / latitude using Grena
+            // (2012)
+            double sza = computeSolarZenith(_utTime, _ttTime,
+                                            M_PI / 2.0 - _coords(th, ph).th,
+                                            _coords(th, ph).ph);
+
+            _hppSigma(th, ph).parallel = sza;
+
+            if (sza >= M_PI / 2) {
+                _hppSigma(th, ph).hall = 0;
+                _hppSigma(th, ph).pederson = 0;
+            } else {
+                _hppSigma(th, ph).hall =
+                    pow(f107, 0.53) * (0.81 * cos(sza) + 0.54 * sqrt(cos(sza)));
+                _hppSigma(th, ph).pederson =
+                    pow(f107, 0.49) * (0.34 * cos(sza) + 0.93 * sqrt(cos(sza)));
+            }
+        }
+    }
 }
 
 void Conductance::_calcSigma() {
-
     double cos, sin, cos2, sin2, cos3, cos4, C;
     for (size_t th = 0; th < _nTh; th++) {
         for (size_t ph = 0; ph < _nPh; ph++) {
@@ -37,6 +76,26 @@ void Conductance::_calcSigma() {
                 _hppSigma(th, ph).hall * _hppSigma(th, ph).hall * sin2 / C;
         }
     }
+}
+
+struct {
+    double sinCoeff;
+    double cosCoeff;
+} typedef fourierCoeff_t;
+
+double fourierSeries(std::vector<fourierCoeff_t> fourierCoefficients,
+                     double mlt) {
+    using std::cos, std::sin;
+
+    double coefficient = 0;
+
+    for (int i = 0; i < 6; i++) {
+        coefficient +=
+            fourierCoefficients[i].cosCoeff * cos((i + 1) * mlt / 12) +
+            fourierCoefficients[i].sinCoeff * sin((i + 1) * mlt / 12);
+    }
+
+    return coefficient;
 }
 
 void Conductance::_calcSigmaDer() {
