@@ -11,9 +11,9 @@ class Conductance {
   private:
     void _calcSigma();
     void _calcSigmaDer();
-    int _auroralConductance();
 
-    void _euvConductance(double f107);
+    int _computeAuroralConductance(int kp, double mlt, double mlat);
+    void _computeEuvConductance(double f107);
 
     size_t _nTh;
     size_t _nPh;
@@ -25,5 +25,7 @@ class Conductance {
     Grid<ThPh>& _coords;
     Grid<Sigma>& _sigma;
     Grid<HppSigma> _hppSigma;
+    Grid<HppSigma> _euvConductance;
+    Grid<HppSigma> _auroralConductance;
     Grid<DSigma> _dSigma;
 };

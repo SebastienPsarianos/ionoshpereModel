@@ -1,4 +1,5 @@
 #include "ionosphere/conductance/Conductance.hpp"
+#include "ionosphere/conductance/HardyConductance.hpp"
 #include "ionosphere/conductance/utils.hpp"
 #include "ionosphere/utils/Grid.hpp"
 #include <cmath>
@@ -10,13 +11,14 @@ Conductance::Conductance(Grid<Sigma>& sigma, Grid<DSigma>& dConductance,
                          Grid<ThPh>& coords, int year, int month, int day,
                          int hour)
     : _nTh(nTh), _nPh(nPh), _sig0(sig0), _coords(coords), _sigma(sigma),
-      _hppSigma(nTh, nPh), _dSigma(dConductance) {
+      _hppSigma(nTh, nPh), _euvConductance(nTh, nPh),
+      _auroralConductance(nPh, nTh), _dSigma(dConductance) {
     computeGrenaTimescales(_utTime, _ttTime, year, month, day, hour);
 }
 
 void Conductance::calculateCoefficients() {
     // TODO: Set f107 dynamically
-    _euvConductance(175.9);
+    _computeEuvConductance(175.9);
 
     std::ofstream conductanceFile("../data/EUVConductance.txt");
 
@@ -29,15 +31,20 @@ void Conductance::calculateCoefficients() {
     //    _calcSigmaDer();
 }
 
-void Conductance::_euvConductance(double f107) {
+void Conductance::_computeEuvConductance(double f107) {
     using std::cos, std::sin, std::sqrt;
     for (size_t th = 0; th < _nTh; th++) {
         for (size_t ph = 0; ph < _nPh; ph++) {
             // Compute Solar Zenith for this longitude / latitude using Grena
             // (2012)
-            double sza = computeSolarZenith(_utTime, _ttTime,
-                                            M_PI / 2.0 - _coords(th, ph).th,
-                                            _coords(th, ph).ph);
+
+            // TODO: Convert coords to use the same
+            GeoSph coordinates;
+            coordinates.theta = _coords(th, ph).th;
+            coordinates.phi = _coords(th, ph).ph;
+
+            double sza =
+                computeSolarZenith(_utTime, _ttTime, convert(coordinates));
 
             _hppSigma(th, ph).parallel = sza;
 
@@ -78,25 +85,41 @@ void Conductance::_calcSigma() {
     }
 }
 
-struct {
-    double sinCoeff;
-    double cosCoeff;
-} typedef fourierCoeff_t;
-
-double fourierSeries(std::vector<fourierCoeff_t> fourierCoefficients,
-                     double mlt) {
+// TODO: Clean this up
+double fourierSeries(struct FourierCoeffs coefficients, double mlt) {
     using std::cos, std::sin;
-
     double coefficient = 0;
-
     for (int i = 0; i < 6; i++) {
-        coefficient +=
-            fourierCoefficients[i].cosCoeff * cos((i + 1) * mlt / 12) +
-            fourierCoefficients[i].sinCoeff * sin((i + 1) * mlt / 12);
+        coefficient += coefficients.cos_terms[i] * cos((i + 1) * mlt / 12) +
+                       coefficients.sin_terms[i] * sin((i + 1) * mlt / 12);
     }
 
     return coefficient;
 }
+
+int Conductance::_computeAuroralConductance(int kp, double mlt, double mlat) {
+    if (kp > 6 || kp < 0)
+        return -1;
+
+    EpsteinParams hall = HARDY_HALL_COEFFS[kp];
+    EpsteinParams pederson = HARDY_HALL_COEFFS[kp];
+    double mlt_rad = (mlt * M_PI) / 12.0;
+
+    // Calculate Hall Conductance
+    double r = fourierSeries(hall.max_val, mlt_rad);
+    double h0 = fourierSeries(hall.max_lat, mlt_rad);
+    double s1 = fourierSeries(hall.up_slope, mlt_rad);
+    double s2 = fourierSeries(hall.down_slope, mlt_rad);
+
+    r = fourierSeries(pederson.max_val, mlt_rad);
+    h0 = fourierSeries(pederson.max_lat, mlt_rad);
+    s1 = fourierSeries(pederson.up_slope, mlt_rad);
+    s2 = fourierSeries(pederson.down_slope, mlt_rad);
+
+    return 0;
+}
+
+double epsteinFunction() {}
 
 void Conductance::_calcSigmaDer() {
     const double dTh = _coords(1, 0).th - _coords(0, 0).th;
