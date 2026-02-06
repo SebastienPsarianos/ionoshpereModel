@@ -12,6 +12,7 @@ set(SOURCES
     src/utils/Coordinates.cpp
     src/utils/LegacyMHDConversion.cpp
     src/conductance/Conductance.cpp
+    src/conductance/utils.cpp
     src/solver/Solver.cpp
     src/postProcessing/EField.cpp
 )
