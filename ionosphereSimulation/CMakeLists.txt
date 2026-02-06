@@ -13,11 +13,16 @@ set(SOURCES
     src/utils/LegacyMHDConversion.cpp
     src/conductance/Conductance.cpp
     src/conductance/utils.cpp
+    src/conductance/data/HardyHallCoefficients.cpp
+    src/conductance/data/HardyPedersonCoefficients.cpp
     src/solver/Solver.cpp
     src/postProcessing/EField.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(${PROJECT_NAME} PRIVATE 
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/external/eigen-5.0.0
+)
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
