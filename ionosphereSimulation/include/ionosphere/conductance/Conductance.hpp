@@ -12,7 +12,7 @@ class Conductance {
     void _calcSigma();
     void _calcSigmaDer();
 
-    int _computeAuroralConductance(int kp, double mlt, double mlat);
+    int _computeAuroralConductance(int kp);
     void _computeEuvConductance(double f107);
 
     size_t _nTh;
