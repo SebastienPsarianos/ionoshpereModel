@@ -52,8 +52,8 @@ int main(int argc, char* argv[]) {
     Conductance(conductance, dConductance, nTh, nPh, SIG0, coords, 2026, 2, 5,
                 5)
         .calculateCoefficients();
-
     return 0;
+
     // TODO: Implement trilinos solver
     Solver(potential, nTh, nPh, coords, kappa, radCurrent, conductance,
            dConductance, GAUSS_SEIDEL)

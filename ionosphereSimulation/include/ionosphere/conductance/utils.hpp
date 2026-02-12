@@ -22,6 +22,7 @@ struct {
     double latitude;  // [-PI/2, PI/2] (PI/2 is North Pole)
     double longitude; // [-PI, PI]
 } typedef MagGeo;
+
 // TODO: Check over this whole thing and likely turn into class containing
 // rotation matrix and  the time stuff
 
