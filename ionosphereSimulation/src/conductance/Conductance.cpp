@@ -21,22 +21,27 @@ void Conductance::calculateCoefficients() {
 
     std::ofstream auroralConductanceFile("../data/auroralconductance.txt");
     int res = _computeAuroralConductance(1);
-    std::cout << res << std::endl;
-
     _auroralConductance.printWithCoords(auroralConductanceFile, _coords);
     auroralConductanceFile.close();
 
-    return;
-
     // TODO: Set f107 dynamically
+
+    std::ofstream euvConductanceFile("../data/EUVConductance.txt");
+    if (!euvConductanceFile.is_open()) {
+        throw std::exception();
+    }
     _computeEuvConductance(175.9);
+    _euvConductance.printWithCoords(euvConductanceFile, _coords);
+    euvConductanceFile.close();
 
-    std::ofstream conductanceFile("../data/EUVConductance.txt");
+    std::ofstream conductanceFile("../data/hppConductance.txt");
     if (!conductanceFile.is_open())
-        throw new std::exception();
-
+        throw std::exception();
+    _computeHppConductance();
     _hppSigma.printWithCoords(conductanceFile, _coords);
     conductanceFile.close();
+
+    return;
 
     _calcSigma();
     std::ofstream conductanceFileSph("../data/SphConductance.txt");
@@ -72,12 +77,12 @@ void Conductance::_computeEuvConductance(double f107) {
             _hppSigma(th, ph).parallel = 20.0;
 
             if (sza >= M_PI / 2) {
-                _hppSigma(th, ph).hall = 0;
-                _hppSigma(th, ph).pederson = 0;
+                _euvConductance(th, ph).hall = 0;
+                _euvConductance(th, ph).pederson = 0;
             } else {
-                _hppSigma(th, ph).hall =
+                _euvConductance(th, ph).hall =
                     pow(f107, 0.53) * (0.81 * cos(sza) + 0.54 * sqrt(cos(sza)));
-                _hppSigma(th, ph).pederson =
+                _euvConductance(th, ph).pederson =
                     pow(f107, 0.49) * (0.34 * cos(sza) + 0.93 * sqrt(cos(sza)));
             }
         }
@@ -108,42 +113,11 @@ void Conductance::_calcSigma() {
     }
 }
 
-double fourierSeries(nlohmann::json coefficients, double mlt) {
-    using std::cos, std::sin;
-    double coefficient = coefficients["const"].get<double>();
-    for (int i = 0; i < 6; i++) {
-        coefficient +=
-            coefficients["cos"][i].get<double>() * cos((i + 1) * mlt / 12) +
-            coefficients["sin"][i].get<double>() * sin((i + 1) * mlt / 12);
-    }
-
-    return coefficient;
-}
-
-double epsteinFunction(double h, double r, double h0, double S1, double S2) {
-    // Break down the terms for clarity and correctness
-
-    // The exponent term: e^{-(h - h0)}
-    double expTerm = std::exp(-(h - h0));
-
-    // Numerator inside the log: [1 - S1 / (S2 * e^{-(h-h0)})]
-    double logNumerator = 1.0 - (S1 / (S2 * expTerm));
-
-    // Denominator inside the log: [1 - (S1 / S2)]
-    double logDenominator = 1.0 - (S1 / S2);
-
-    // Combine everything
-    // Note the '*' after (S2 - S1)
-    return r + S1 * (h - h0) +
-           (S2 - S1) * std::log(logNumerator / logDenominator);
-}
-
 int Conductance::_computeAuroralConductance(int kp) {
     using nlohmann::json;
     if (kp > 6 || kp < 0)
         return -1;
 
-    // std::fstream hallCoeff("./data/hardyHallCoeff.json");
     std::fstream pedCoeff("../src/conductance/data/hardyPedersonCoeff.json");
     if (pedCoeff) {
         json data = json::parse(pedCoeff)["K" + std::to_string(kp)];
@@ -158,13 +132,13 @@ int Conductance::_computeAuroralConductance(int kp) {
                 GeoSph observerPosition;
                 observerPosition.theta = _coords(th, ph).th;
                 observerPosition.phi = _coords(th, ph).ph;
+
                 MagSph observerPositionMag;
                 geoCentricToDipole(observerPositionMag, observerPosition);
 
                 GeoGeo subsolarPosition;
                 computeSubSolar(subsolarPosition, _utTime, _ttTime);
                 MagSph subsolarPositionMag;
-
                 geoCentricToDipole(subsolarPositionMag,
                                    convert(subsolarPosition));
 
@@ -172,24 +146,59 @@ int Conductance::_computeAuroralConductance(int kp) {
                     convert(subsolarPositionMag), convert(observerPositionMag));
 
                 double mlat = convert(observerPositionMag).latitude;
-
-                // TODO: Figure out if I need to convert the MLT to radians
                 double max_value = fourierSeries(fourier_max_value, mlt);
                 double max_latitude = fourierSeries(fourier_max_latitude, mlt);
-                double down_slope = fourierSeries(fourier_down_slope, mlt);
                 double up_slope = fourierSeries(fourier_up_slope, mlt);
+                double down_slope = fourierSeries(fourier_down_slope, mlt);
 
-                // TODO: Make sure this is done properly
                 _auroralConductance(th, ph).pederson = epsteinFunction(
-                    mlat, max_value, max_latitude, down_slope, up_slope);
+                    mlat, max_value, max_latitude, up_slope, down_slope);
 
-                if (mlat > max_latitude &&
-                    _auroralConductance(th, ph).pederson < 0.55) {
-                    _auroralConductance(th, ph).pederson = 0.55;
-                }
+                _auroralConductance(th, ph).hall = observerPositionMag.phi;
+                _auroralConductance(th, ph).parallel =
+                    observerPositionMag.theta;
+            }
+        }
 
-                _auroralConductance(th, ph).hall = 0;
-                _auroralConductance(th, ph).parallel = 0;
+    } else {
+        return -1;
+    }
+
+    std::fstream hallCoeff("../src/conductance/data/hardyHallCoeff.json");
+    if (hallCoeff) {
+        json data = json::parse(hallCoeff)["K" + std::to_string(kp)];
+        json fourier_max_value = data["max_value"];
+        json fourier_max_latitude = data["max_latitude"];
+        json fourier_up_slope = data["up_slope"];
+        json fourier_down_slope = data["down_slope"];
+
+        for (size_t th = 0; th < _nTh; th++) {
+            for (size_t ph = 0; ph < _nPh; ph++) {
+
+                GeoSph observerPosition;
+                observerPosition.theta = _coords(th, ph).th;
+                observerPosition.phi = _coords(th, ph).ph;
+
+                MagSph observerPositionMag;
+                geoCentricToDipole(observerPositionMag, observerPosition);
+
+                GeoGeo subsolarPosition;
+                computeSubSolar(subsolarPosition, _utTime, _ttTime);
+                MagSph subsolarPositionMag;
+                geoCentricToDipole(subsolarPositionMag,
+                                   convert(subsolarPosition));
+
+                double mlt = computeMagneticLocalTime(
+                    convert(subsolarPositionMag), convert(observerPositionMag));
+
+                double mlat = convert(observerPositionMag).latitude;
+                double max_value = fourierSeries(fourier_max_value, mlt);
+                double max_latitude = fourierSeries(fourier_max_latitude, mlt);
+                double up_slope = fourierSeries(fourier_up_slope, mlt);
+                double down_slope = fourierSeries(fourier_down_slope, mlt);
+
+                _auroralConductance(th, ph).hall = epsteinFunction(
+                    mlat, max_value, max_latitude, up_slope, down_slope);
             }
         }
 
@@ -198,6 +207,24 @@ int Conductance::_computeAuroralConductance(int kp) {
     }
 
     return 0;
+}
+
+void Conductance::_computeHppConductance() {
+    for (size_t th = 0; th < _nTh; th++) {
+        for (size_t ph = 0; ph < _nPh; ph++) {
+            _hppSigma(th, ph).hall = sqrt(_auroralConductance(th, ph).hall *
+                                              _auroralConductance(th, ph).hall +
+                                          _euvConductance(th, ph).hall *
+                                              _euvConductance(th, ph).hall);
+            _hppSigma(th, ph).pederson =
+                sqrt(_auroralConductance(th, ph).pederson *
+                         _auroralConductance(th, ph).pederson +
+                     _euvConductance(th, ph).pederson *
+                         _euvConductance(th, ph).pederson);
+
+            _hppSigma(th, ph).parallel = 0;
+        }
+    }
 }
 
 void Conductance::_calcSigmaDer() {
