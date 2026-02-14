@@ -1,4 +1,5 @@
 #pragma once
+#include <nlohmann/json>
 #define SUNFREQ .0172019715
 
 // TODO: Come up with better names / docs for these and integrate with
@@ -84,3 +85,7 @@ double computeSolarZenith(double utTime, double ttTime, GeoGeo coords);
 void computeSubSolar(GeoGeo& subSolar, double utTime, double ttTime);
 
 double computeMagneticLocalTime(MagGeo subsolar, MagGeo observer);
+
+double fourierSeries(nlohmann::json coefficients, double mlt);
+
+double epsteinFunction(double h, double r, double h0, double S1, double S2);

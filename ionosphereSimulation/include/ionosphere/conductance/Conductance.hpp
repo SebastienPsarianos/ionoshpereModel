@@ -14,6 +14,7 @@ class Conductance {
 
     int _computeAuroralConductance(int kp);
     void _computeEuvConductance(double f107);
+    void _computeHppConductance();
 
     size_t _nTh;
     size_t _nPh;

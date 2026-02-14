@@ -81,7 +81,7 @@ double computeSolarZenith(double utTime, double ttTime, GeoGeo coords) {
         asin(sin(coords.latitude) * sin(declination) +
              cos(coords.latitude) * cos(declination) * cos(hourAngle));
 
-    elevationAngle = elevationAngle - 4.26e-5 * cos(elevationAngle);
+    // elevationAngle = elevationAngle - 4.26e-5 * cos(elevationAngle);
 
     return M_PI / 2 - elevationAngle;
 }
@@ -102,8 +102,10 @@ void computeSubSolar(GeoGeo& subSolar, double utTime, double ttTime) {
 }
 
 double computeMagneticLocalTime(MagGeo subsolar, MagGeo observer) {
-    return (observer.longitude - subsolar.longitude) * (180.0 / M_PI) / 15.0 +
-           12.0;
+    double mlt =
+        (observer.longitude - subsolar.longitude) * (180.0 / M_PI) / 15.0 +
+        12.0;
+    return std::fmod(mlt + 24.0, 24.0);
 }
 
 void computeGrenaTimescales(double& utTime, double& ttTime, int year, int month,
@@ -158,4 +160,26 @@ void geoCentricToDipole(MagSph& magCoords, GeoSph geoCoords) {
 
     magCoords.theta = acos(r_cd.z());
     magCoords.phi = atan2(r_cd.y(), r_cd.x());
+    if (magCoords.phi < 0.0) {
+        magCoords.phi += 2.0 * M_PI;
+    }
+}
+
+double fourierSeries(nlohmann::json coefficients, double mlt) {
+    using std::cos, std::sin;
+    double coefficient = coefficients["const"].get<double>();
+    for (int i = 0; i < 6; i++) {
+        coefficient += coefficients["cos"][i].get<double>() *
+                           cos((i + 1) * mlt * M_PI / 12) +
+                       coefficients["sin"][i].get<double>() *
+                           sin((i + 1) * mlt * M_PI / 12);
+    }
+
+    return coefficient;
+}
+
+double epsteinFunction(double h, double r, double h0, double S1, double S2) {
+    return r + S1 * (h - h0) +
+           (S2 - S1) * std::log((1.0 - (S1 / (S2 * std::exp(-(h - h0))))) /
+                                (1.0 - (S1 / S2)));
 }
