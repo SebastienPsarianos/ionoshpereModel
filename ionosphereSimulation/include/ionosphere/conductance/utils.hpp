@@ -1,28 +1,7 @@
 #pragma once
+#include "ionosphere/utils/Grid.hpp"
 #include <nlohmann/json>
 #define SUNFREQ .0172019715
-
-// TODO: Come up with better names / docs for these and integrate with
-// Coords.hpp
-struct {
-    double theta; // [0, Pi] Colatitude (0 is north pole)
-    double phi;   // [0, 2Pi]Longitude
-} typedef GeoSph;
-
-struct {
-    double latitude;  // [-PI/2, PI/2] (PI/2 is North Pole)
-    double longitude; // [-PI, PI]
-} typedef GeoGeo;
-
-struct {
-    double theta; // [0, Pi] Colatitude (0 is north pole)
-    double phi;   // [0, 2Pi] Longitude
-} typedef MagSph;
-
-struct {
-    double latitude;  // [-PI/2, PI/2] (PI/2 is North Pole)
-    double longitude; // [-PI, PI]
-} typedef MagGeo;
 
 // TODO: Check over this whole thing and likely turn into class containing
 // rotation matrix and  the time stuff

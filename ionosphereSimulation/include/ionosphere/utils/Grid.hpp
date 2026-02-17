@@ -4,11 +4,6 @@
 #include <vector>
 
 struct {
-    double th;
-    double ph;
-} typedef ThPh;
-
-struct {
     double x;
     double y;
     double z;
@@ -34,25 +29,47 @@ struct {
 } typedef DSigma;
 
 struct {
-    double thth;
-    double phph;
     double th;
     double ph;
+    double thth;
+    double phph;
 } typedef Coeff;
 
+// TODO: Come up with better names / docs for these
+struct {
+    double theta; // [0, Pi] Colatitude (0 is north pole)
+    double phi;   // [0, 2Pi]Longitude
+} typedef GeoSph;
+
+struct {
+    double latitude;  // [-PI/2, PI/2] (PI/2 is North Pole)
+    double longitude; // [-PI, PI]
+} typedef GeoGeo;
+
+struct {
+    double theta; // [0, Pi] Colatitude (0 is north pole)
+    double phi;   // [0, 2Pi] Longitude
+} typedef MagSph;
+
+struct {
+    double latitude;  // [-PI/2, PI/2] (PI/2 is North Pole)
+    double longitude; // [-PI, PI]
+} typedef MagGeo;
+
 template <typename T>
-concept ValidStruct =
-    std::is_same_v<T, ThPh> || std::is_same_v<T, CartVector> ||
-    std::is_same_v<T, Sigma> || std::is_same_v<T, HppSigma> ||
-    std::is_same_v<T, DSigma> || std::is_same_v<T, Coeff> ||
-    std::is_same_v<T, double>;
+concept ValidStruct = std::is_same_v<T, CartVector> ||
+                      std::is_same_v<T, Sigma> || std::is_same_v<T, HppSigma> ||
+                      std::is_same_v<T, DSigma> || std::is_same_v<T, GeoGeo> ||
+                      std::is_same_v<T, GeoSph> || std::is_same_v<T, MagGeo> ||
+                      std::is_same_v<T, MagSph> || std::is_same_v<T, double>;
 
 template <typename T> class Grid {
   public:
     Grid(size_t nTh, size_t nPh, std::optional<T> initialValue = std::nullopt);
     T& operator()(size_t th, size_t ph);
     const T& operator()(size_t th, size_t ph) const;
-    std::ostream& printWithCoords(std::ostream& out, const Grid<ThPh>& coords);
+    std::ostream& printWithCoords(std::ostream& out,
+                                  const Grid<GeoSph>& coords);
 
     size_t nTh;
     size_t nPh;
@@ -61,8 +78,20 @@ template <typename T> class Grid {
     std::vector<T> _grid;
 };
 
-inline std::ostream& operator<<(std::ostream& out, const ThPh& s) {
-    return out << s.th << " " << s.ph;
+inline std::ostream& operator<<(std::ostream& out, const GeoSph& s) {
+    return out << s.theta << " " << s.phi;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const MagSph& s) {
+    return out << s.theta << " " << s.phi;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const MagGeo& s) {
+    return out << s.latitude << " " << s.longitude;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const GeoGeo& s) {
+    return out << s.latitude << " " << s.longitude;
 }
 
 inline std::ostream& operator<<(std::ostream& out, const CartVector& s) {
@@ -83,5 +112,5 @@ inline std::ostream& operator<<(std::ostream& out, const DSigma& s) {
 }
 
 inline std::ostream& operator<<(std::ostream& out, const Coeff& s) {
-    return out << s.thth << " " << s.phph << " " << s.th << " " << s.ph;
+    return out << s.th << " " << s.ph << " " << s.phph << " " << s.thth;
 }

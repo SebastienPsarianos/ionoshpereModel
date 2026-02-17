@@ -4,7 +4,7 @@
 #include <stdexcept>
 
 int LegacyMHDConversion::processLegacyOutput(std::string filename,
-                                             Grid<ThPh>& coords,
+                                             Grid<GeoSph>& coords,
                                              Grid<double>& radCurrent, int nTh,
                                              int nPh) {
     std::fstream jrData = std::fstream(filename);
@@ -21,8 +21,8 @@ int LegacyMHDConversion::processLegacyOutput(std::string filename,
         for (int ph = 0; ph < nPh; ph++) {
             if (std::getline(jrData, line)) {
 
-                std::sscanf(line.c_str(), "%lf %lf %lf", &coords(th, ph).th,
-                            &coords(th, ph).ph, &radCurrent(th, ph));
+                std::sscanf(line.c_str(), "%lf %lf %lf", &coords(th, ph).theta,
+                            &coords(th, ph).phi, &radCurrent(th, ph));
             } else {
                 throw std::length_error(
                     "File length doesn't match provided coordinates");

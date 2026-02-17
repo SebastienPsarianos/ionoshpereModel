@@ -1,80 +1,64 @@
-#include "ionosphere/conductance/Conductance.hpp"
+#include "ionosphere/conductance/EmpConductance.hpp"
 #include "ionosphere/conductance/utils.hpp"
 #include "ionosphere/utils/Grid.hpp"
+
 #include <cmath>
 #include <exception>
 #include <fstream>
 #include <nlohmann/json>
 #include <string>
 
-Conductance::Conductance(Grid<Sigma>& sigma, Grid<DSigma>& dConductance,
-                         size_t nTh, size_t nPh, double sig0,
-                         Grid<ThPh>& coords, int year, int month, int day,
-                         int hour)
-    : _nTh(nTh), _nPh(nPh), _sig0(sig0), _coords(coords), _sigma(sigma),
-      _hppSigma(nTh, nPh), _euvConductance(nTh, nPh),
-      _auroralConductance(nTh, nPh), _dSigma(dConductance) {
+EmpConductance::EmpConductance(size_t nTh, size_t nPh, double sig0, int year,
+                               int day, int month, int hour)
+    : _nTh(nTh), _nPh(nPh), _sig0(sig0), _hppSigma(nTh, nPh),
+      _euvConductance(nTh, nPh), _auroralConductance(nTh, nPh) {
     computeGrenaTimescales(_utTime, _ttTime, year, month, day, hour);
 }
 
-void Conductance::calculateCoefficients() {
+int EmpConductance::computeConductance(Grid<Sigma>& sigma,
+                                       Grid<DSigma>& dConductance,
+                                       Grid<GeoSph>& coords) {
 
-    std::ofstream auroralConductanceFile("../data/auroralconductance.txt");
-    int res = _computeAuroralConductance(1);
-    _auroralConductance.printWithCoords(auroralConductanceFile, _coords);
-    auroralConductanceFile.close();
-
-    // TODO: Set f107 dynamically
-
-    std::ofstream euvConductanceFile("../data/EUVConductance.txt");
-    if (!euvConductanceFile.is_open()) {
-        throw std::exception();
+    // TODO: Set kp and f107 value dynamically
+    if (_computeAuroralConductance(1, coords) < 0) {
+        return -1;
     }
-    _computeEuvConductance(175.9);
-    _euvConductance.printWithCoords(euvConductanceFile, _coords);
-    euvConductanceFile.close();
+    _computeEuvConductance(175.9, coords);
 
     std::ofstream conductanceFile("../data/hppConductance.txt");
     if (!conductanceFile.is_open())
         throw std::exception();
     _computeHppConductance();
-    _hppSigma.printWithCoords(conductanceFile, _coords);
+    _hppSigma.printWithCoords(conductanceFile, coords);
     conductanceFile.close();
 
-    return;
-
-    _calcSigma();
+    _calcSigma(sigma, coords);
     std::ofstream conductanceFileSph("../data/SphConductance.txt");
     if (!conductanceFileSph.is_open())
         throw new std::exception();
 
-    _sigma.printWithCoords(conductanceFileSph, _coords);
+    sigma.printWithCoords(conductanceFileSph, coords);
 
-    _calcSigmaDer();
+    _calcSigmaDer(dConductance, sigma, coords);
     std::ofstream dConductanceFile("../data/dConductance.txt");
     if (!dConductanceFile.is_open())
         throw new std::exception();
 
-    _dSigma.printWithCoords(dConductanceFile, _coords);
+    dConductance.printWithCoords(dConductanceFile, coords);
     conductanceFile.close();
+
+    return 0;
 }
 
-void Conductance::_computeEuvConductance(double f107) {
+void EmpConductance::_computeEuvConductance(double f107, Grid<GeoSph>& coords) {
     using std::cos, std::sin, std::sqrt;
     for (size_t th = 0; th < _nTh; th++) {
         for (size_t ph = 0; ph < _nPh; ph++) {
             // Compute Solar Zenith for this longitude / latitude using Grena
             // (2012)
 
-            // TODO: Convert coords to use the same
-            GeoSph coordinates;
-            coordinates.theta = _coords(th, ph).th;
-            coordinates.phi = _coords(th, ph).ph;
-
             double sza =
-                computeSolarZenith(_utTime, _ttTime, convert(coordinates));
-
-            _hppSigma(th, ph).parallel = 20.0;
+                computeSolarZenith(_utTime, _ttTime, convert(coords(th, ph)));
 
             if (sza >= M_PI / 2) {
                 _euvConductance(th, ph).hall = 0;
@@ -89,31 +73,32 @@ void Conductance::_computeEuvConductance(double f107) {
     }
 }
 
-void Conductance::_calcSigma() {
+void EmpConductance::_calcSigma(Grid<Sigma>& sigma, Grid<GeoSph>& coords) {
     double cos, sin, cos2, sin2, cos3, cos4, C;
     for (size_t th = 0; th < _nTh; th++) {
         for (size_t ph = 0; ph < _nPh; ph++) {
-            cos = std::cos(_coords(th, ph).th);
-            sin = std::sin(_coords(th, ph).th);
+            cos = std::cos(coords(th, ph).theta);
+            sin = std::sin(coords(th, ph).theta);
             cos2 = std::pow(cos, 2);
             sin2 = std::pow(sin, 2);
             cos3 = 1.00 + 3.00 * cos2;
             cos4 = sqrt(cos3);
+
             C = 4.00 * _hppSigma(th, ph).parallel * cos2 +
                 _hppSigma(th, ph).pederson * sin2;
 
-            _sigma(th, ph).thth = _hppSigma(th, ph).parallel *
-                                  _hppSigma(th, ph).pederson * cos3 / C;
-            _sigma(th, ph).thph = 2.00 * _hppSigma(th, ph).parallel *
-                                  _hppSigma(th, ph).hall * cos * cos4 / C;
-            _sigma(th, ph).phph =
+            sigma(th, ph).thth = _hppSigma(th, ph).parallel *
+                                 _hppSigma(th, ph).pederson * cos3 / C;
+            sigma(th, ph).thph = 2.00 * _hppSigma(th, ph).parallel *
+                                 _hppSigma(th, ph).hall * cos * cos4 / C;
+            sigma(th, ph).phph =
                 _hppSigma(th, ph).pederson +
                 _hppSigma(th, ph).hall * _hppSigma(th, ph).hall * sin2 / C;
         }
     }
 }
 
-int Conductance::_computeAuroralConductance(int kp) {
+int EmpConductance::_computeAuroralConductance(int kp, Grid<GeoSph>& coords) {
     using nlohmann::json;
     if (kp > 6 || kp < 0)
         return -1;
@@ -128,13 +113,8 @@ int Conductance::_computeAuroralConductance(int kp) {
 
         for (size_t th = 0; th < _nTh; th++) {
             for (size_t ph = 0; ph < _nPh; ph++) {
-
-                GeoSph observerPosition;
-                observerPosition.theta = _coords(th, ph).th;
-                observerPosition.phi = _coords(th, ph).ph;
-
                 MagSph observerPositionMag;
-                geoCentricToDipole(observerPositionMag, observerPosition);
+                geoCentricToDipole(observerPositionMag, coords(th, ph));
 
                 GeoGeo subsolarPosition;
                 computeSubSolar(subsolarPosition, _utTime, _ttTime);
@@ -155,8 +135,6 @@ int Conductance::_computeAuroralConductance(int kp) {
                     mlat, max_value, max_latitude, up_slope, down_slope);
 
                 _auroralConductance(th, ph).hall = observerPositionMag.phi;
-                _auroralConductance(th, ph).parallel =
-                    observerPositionMag.theta;
             }
         }
 
@@ -175,12 +153,8 @@ int Conductance::_computeAuroralConductance(int kp) {
         for (size_t th = 0; th < _nTh; th++) {
             for (size_t ph = 0; ph < _nPh; ph++) {
 
-                GeoSph observerPosition;
-                observerPosition.theta = _coords(th, ph).th;
-                observerPosition.phi = _coords(th, ph).ph;
-
                 MagSph observerPositionMag;
-                geoCentricToDipole(observerPositionMag, observerPosition);
+                geoCentricToDipole(observerPositionMag, coords(th, ph));
 
                 GeoGeo subsolarPosition;
                 computeSubSolar(subsolarPosition, _utTime, _ttTime);
@@ -209,7 +183,7 @@ int Conductance::_computeAuroralConductance(int kp) {
     return 0;
 }
 
-void Conductance::_computeHppConductance() {
+void EmpConductance::_computeHppConductance() {
     for (size_t th = 0; th < _nTh; th++) {
         for (size_t ph = 0; ph < _nPh; ph++) {
             _hppSigma(th, ph).hall = sqrt(_auroralConductance(th, ph).hall *
@@ -222,51 +196,53 @@ void Conductance::_computeHppConductance() {
                      _euvConductance(th, ph).pederson *
                          _euvConductance(th, ph).pederson);
 
-            _hppSigma(th, ph).parallel = 0;
+            _hppSigma(th, ph).parallel = 1000;
         }
     }
 }
 
-void Conductance::_calcSigmaDer() {
-    const double dTh = _coords(1, 0).th - _coords(0, 0).th;
-    const double dPh = _coords(0, 1).ph - _coords(0, 0).ph;
+void EmpConductance::_calcSigmaDer(Grid<DSigma>& dConductance,
+                                   Grid<Sigma>& sigma, Grid<GeoSph>& coords) {
+
+    const double dTh = coords(1, 0).theta - coords(0, 0).theta;
+    const double dPh = coords(0, 1).phi - coords(0, 0).phi;
 
     // TODO: Figure out pole behaviour for th
     for (size_t th = 1; th < _nTh - 1; th++) {
         // NOTE: Boundary points for phi should be continuous
         //      and wrap around to the start of the phi grid.
         //     Boundary points (phi = 0 and phi = _nPh - 1) are
-        //      calculated as derrivatives between phi = 1 and nPh-2
-        _dSigma(th, 0).dthph_ph =
-            (_sigma(th, 1).thph - _sigma(th, _nPh - 2).thph) / (2 * dPh);
-        _dSigma(th, _nPh - 1).dthph_ph = _dSigma(th, 0).dthph_ph;
+        //      calculated as derivatives between phi = 1 and nPh-2
+        dConductance(th, 0).dthph_ph =
+            (sigma(th, 1).thph - sigma(th, _nPh - 2).thph) / (2 * dPh);
+        dConductance(th, _nPh - 1).dthph_ph = dConductance(th, 0).dthph_ph;
 
-        _dSigma(th, 0).dphph_ph =
-            (_sigma(th, 1).phph - _sigma(th, _nPh - 2).phph) / (2 * dPh);
-        _dSigma(th, _nPh - 1).dphph_ph = _dSigma(th, 0).dphph_ph;
+        dConductance(th, 0).dphph_ph =
+            (sigma(th, 1).phph - sigma(th, _nPh - 2).phph) / (2 * dPh);
+        dConductance(th, _nPh - 1).dphph_ph = dConductance(th, 0).dphph_ph;
 
         // We also set the th derivatives to be equal accross the circular
         // boundary
-        _dSigma(th, 0).dthth_th =
-            (_sigma(th + 1, 0).thth - _sigma(th - 1, 0).thth) / (2 * dTh);
-        _dSigma(th, _nPh - 1).dthth_th = _dSigma(th, 0).dthth_th;
+        dConductance(th, 0).dthth_th =
+            (sigma(th + 1, 0).thth - sigma(th - 1, 0).thth) / (2 * dTh);
+        dConductance(th, _nPh - 1).dthth_th = dConductance(th, 0).dthth_th;
 
-        _dSigma(th, 0).dthph_th =
-            (_sigma(th + 1, 0).thph - _sigma(th - 1, 0).thph) / (2 * dTh);
-        _dSigma(th, _nPh - 1).dthph_th = _dSigma(th, 0).dthph_th;
+        dConductance(th, 0).dthph_th =
+            (sigma(th + 1, 0).thph - sigma(th - 1, 0).thph) / (2 * dTh);
+        dConductance(th, _nPh - 1).dthph_th = dConductance(th, 0).dthph_th;
 
         for (size_t ph = 1; ph < _nPh - 1; ph++) {
-            _dSigma(th, ph).dthth_th =
-                (_sigma(th + 1, ph).thth - _sigma(th - 1, ph).thth) / (2 * dTh);
+            dConductance(th, ph).dthth_th =
+                (sigma(th + 1, ph).thth - sigma(th - 1, ph).thth) / (2 * dTh);
 
-            _dSigma(th, ph).dthph_ph =
-                (_sigma(th, ph + 1).thph - _sigma(th, ph - 1).thph) / (2 * dPh);
+            dConductance(th, ph).dthph_ph =
+                (sigma(th, ph + 1).thph - sigma(th, ph - 1).thph) / (2 * dPh);
 
-            _dSigma(th, ph).dthph_th =
-                (_sigma(th + 1, ph).thph - _sigma(th - 1, ph).thph) / (2 * dTh);
+            dConductance(th, ph).dthph_th =
+                (sigma(th + 1, ph).thph - sigma(th - 1, ph).thph) / (2 * dTh);
 
-            _dSigma(th, ph).dphph_ph =
-                (_sigma(th, ph + 1).phph - _sigma(th, ph - 1).phph) / (2 * dPh);
+            dConductance(th, ph).dphph_ph =
+                (sigma(th, ph + 1).phph - sigma(th, ph - 1).phph) / (2 * dPh);
         }
     }
 }

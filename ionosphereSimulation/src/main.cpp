@@ -1,6 +1,6 @@
-#include "ionosphere/conductance/Conductance.hpp"
+#include "ionosphere/conductance/EmpConductance.hpp"
 #include "ionosphere/postProcessing/EField.hpp"
-#include "ionosphere/solver/Solver.hpp"
+#include "ionosphere/solver/GsSolver.hpp"
 #include "ionosphere/utils/Coordinates.hpp"
 #include "ionosphere/utils/Grid.hpp"
 #include "ionosphere/utils/LegacyMHDConversion.hpp"
@@ -10,6 +10,11 @@
 double SIG0 = 20.00;
 double SIGP = 2.00;
 double SIGH = 2.00;
+
+int YEAR = 2026;
+int MONTH = 2;
+int DAY = 5;
+int HOUR = 5;
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -29,13 +34,12 @@ int main(int argc, char* argv[]) {
               << ", " << nPh << ") grid detected" << std::endl;
 
     // creating required grids
-    Grid<ThPh> coords = Grid<ThPh>(nTh, nPh);
+    Grid<GeoSph> coords = Grid<GeoSph>(nTh, nPh);
     Grid<double> radCurrent = Grid<double>(nTh, nPh, 0.0);
-    Grid<Coeff> kappa = Grid<Coeff>(nTh, nPh);
     Grid<Sigma> conductance = Grid<Sigma>(nTh, nPh);
     Grid<DSigma> dConductance = Grid<DSigma>(nTh, nPh);
     Grid<double> potential = Grid<double>(nTh, nPh, 0.0);
-    Grid<ThPh> eField = Grid<ThPh>(nTh, nPh);
+    Grid<GeoSph> eField = Grid<GeoSph>(nTh, nPh);
 
     // TODO: Coupling procedure
     int processRes = LegacyMHDConversion::processLegacyOutput(
@@ -46,17 +50,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // TODO:
-    // - Implement EUV conductance model
-    // - Auroral conductance model
-    Conductance(conductance, dConductance, nTh, nPh, SIG0, coords, 2026, 2, 5,
-                5)
-        .calculateCoefficients();
-    return 0;
+    EmpConductance(nTh, nPh, SIG0, 2026, 2, 5, 5)
+        .computeConductance(conductance, dConductance, coords);
 
     // TODO: Implement trilinos solver
-    Solver(potential, nTh, nPh, coords, kappa, radCurrent, conductance,
-           dConductance, GAUSS_SEIDEL)
+    GsSolver(potential, nTh, nPh, coords, radCurrent, conductance, dConductance)
         .calculatePotential();
 
     // TODO: Proper post-processing, including J and others

@@ -6,11 +6,9 @@ import argparse
 import numpy as np
 import matplotlib
 
-matplotlib.use('Qt5Agg')  # Switch to Qt backend
-
 
 def plot_sphere_multiple(filename):
-    """ 
+    """
     Reads coordinate and potential data from a file and plots 3D spherical heatmaps.
     Detects multiple value columns and creates subplots for each.
     """
@@ -56,8 +54,8 @@ def plot_sphere_multiple(filename):
     n_th = len(unique_theta)
     n_ph = len(unique_phi)
 
-    print(f"Detected Grid: nTh={n_th}, nPh={
-          n_ph} (Total rows: {num_data_points})")
+    print(
+        f"Detected Grid: nTh={n_th}, nPh={n_ph} (Total rows: {num_data_points})")
 
     if n_th * n_ph != num_data_points:
         print("Error: Grid dimensions do not match the number of data points.")
@@ -135,8 +133,8 @@ def plot_sphere_multiple(filename):
         # Turn off grid/axis numbers if you want a cleaner look
         # ax.axis('off')
 
-    fig.suptitle(f'3D Visualization: {
-                 os.path.basename(filename)}', fontsize=16)
+    fig.suptitle(
+        f'3D Visualization: {os.path.basename(filename)}', fontsize=16)
     plt.show()
 
 
