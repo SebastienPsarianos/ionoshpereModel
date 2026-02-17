@@ -1,6 +1,3 @@
 #include "ionosphere/utils/Grid.hpp"
 
-class Coordinates {
-  public:
-    static void calculateCoords(Grid<ThPh>& coordinates);
-};
+void calculateCoords(Grid<GeoSph>& coordinates);

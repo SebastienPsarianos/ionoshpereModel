@@ -6,6 +6,7 @@ import glob
 LEGACY_LOCATION = "../legacySolution/src/"
 LEGACY_EXEC = "ionosphere.exe"
 NEW_DATA_FOLDER = "../ionosphereSimulation/data/"
+NEW_FOLDER = "../ionosphereSimulation/"
 NEW_BUILD_LOCATION = "../ionosphereSimulation/build/"
 PLOTTING_FOLDER = "../data"
 NEW_EXEC = "IonosphereSolver"
@@ -57,8 +58,8 @@ def runProcesses():
         else:
             print("Failed to find " + FILE)
 
-    subprocess.run(["cmake", "../"],
-                   cwd=NEW_BUILD_LOCATION,
+    subprocess.run(["./build.sh"],
+                   cwd=NEW_FOLDER,
                    stdout=subprocess.DEVNULL,
                    check=True)
 

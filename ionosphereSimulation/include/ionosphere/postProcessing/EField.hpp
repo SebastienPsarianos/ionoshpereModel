@@ -1,4 +1,4 @@
 #include "ionosphere/utils/Grid.hpp"
 
-void calculateEField(Grid<ThPh>& eField, Grid<double>& potential,
-                     Grid<ThPh>& coords);
+void calculateEField(Grid<GeoSph>& eField, Grid<double>& potential,
+                     Grid<GeoSph>& coords);

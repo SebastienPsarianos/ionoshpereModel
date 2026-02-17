@@ -21,10 +21,10 @@ template <typename T> const T& Grid<T>::operator()(size_t th, size_t ph) const {
 
 template <typename T>
 std::ostream& Grid<T>::printWithCoords(std::ostream& out,
-                                       const Grid<ThPh>& coords) {
+                                       const Grid<GeoSph>& coords) {
     for (size_t th = 0; th < nTh; th++) {
         for (size_t ph = 0; ph < nPh; ph++) {
-            out << coords(th, ph).th << " " << coords(th, ph).ph << " "
+            out << coords(th, ph).theta << " " << coords(th, ph).phi << " "
                 << (*this)(th, ph) << "\n";
         }
     }
@@ -32,9 +32,12 @@ std::ostream& Grid<T>::printWithCoords(std::ostream& out,
 }
 
 template class Grid<double>;
-template class Grid<ThPh>;
 template class Grid<CartVector>;
 template class Grid<Sigma>;
 template class Grid<HppSigma>;
 template class Grid<DSigma>;
+template class Grid<GeoSph>;
+template class Grid<MagSph>;
+template class Grid<GeoGeo>;
+template class Grid<MagGeo>;
 template class Grid<Coeff>;
