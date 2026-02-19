@@ -1,9 +1,11 @@
 #include "ionosphere/conductance/EmpConductance.hpp"
 #include "ionosphere/postProcessing/EField.hpp"
 #include "ionosphere/solver/GsSolver.hpp"
+#include "ionosphere/solver/TlSolver.hpp"
 #include "ionosphere/utils/Coordinates.hpp"
 #include "ionosphere/utils/Grid.hpp"
 #include "ionosphere/utils/LegacyMHDConversion.hpp"
+#include <Tpetra_Core.hpp>
 #include <fstream>
 #include <iostream>
 
@@ -17,6 +19,9 @@ int DAY = 5;
 int HOUR = 5;
 
 int main(int argc, char* argv[]) {
+    Tpetra::ScopeGuard tpetraScope(&argc, &argv);
+    auto comm = Tpetra::getDefaultComm();
+
     if (argc < 2) {
         std::cerr << "Missing filename for Radial Current data" << std::endl;
         return -1;
@@ -56,6 +61,8 @@ int main(int argc, char* argv[]) {
     // TODO: Implement trilinos solver
     GsSolver(potential, nTh, nPh, coords, radCurrent, conductance, dConductance)
         .calculatePotential();
+
+    TlSolver test = TlSolver(nTh, nPh, tpetraScope, comm).calculatePotential();
 
     // TODO: Proper post-processing, including J and others
     calculateEField(eField, potential, coords);
