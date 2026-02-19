@@ -1,31 +1,22 @@
 spack:
   specs:
-  - trilinos@16.0.0 +mpi +shared +tpetra %gcc
+  - trilinos@16.0.0 +mpi +shared +tpetra %gcc@13.3.0
 
   packages:
     # 1. Force the use of Netlib LAPACK (Stable replacement for OpenBLAS)
-    blas:
-      require: "netlib-lapack"
-    lapack:
-      require: "netlib-lapack"
-
-    # 2. Keep your gmake fix (it's working!)
-    gmake:
-      require: "%apple-clang"
 
     # 3. Keep MPI / Trilinos on GCC
+    gcc:
+      externals:
+      - spec: gcc@13.3.0 languages:='c,c++'
+        prefix: /usr
+        extra_attributes:
+          compilers:
+            c: /usr/bin/gcc
+            cxx: /usr/bin/g++
     mpi:
       require:
       - openmpi
-    openmpi:
-      require:
-      - "%gcc"
-    trilinos:
-      require:
-      - "%gcc"
-    netlib-lapack:
-      require:
-      - "%gcc"
 
   view: true
   concretizer:
