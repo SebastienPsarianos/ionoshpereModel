@@ -2,7 +2,7 @@
 #include "ionosphere/solver/Solver.hpp"
 #include "ionosphere/utils/Grid.hpp"
 
-class GsSolver : Solver {
+class GsSolver {
   public:
     GsSolver(Grid<double>& potential, size_t nTh, size_t nPh,
              Grid<GeoSph>& coords, Grid<double>& radCurrent,

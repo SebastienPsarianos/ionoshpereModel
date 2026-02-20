@@ -131,30 +131,14 @@ void computeGrenaTimescales(double& utTime, double& ttTime, int year, int month,
 // 1. Store the matrix and just apply it when needed
 // 2. Grab the values from the table
 // 3. Look into interpolation
-void geoCentricToDipole(MagSph& magCoords, GeoSph geoCoords) {
+void geoCentricToDipole(MagSph& magCoords, GeoSph geoCoords,
+                        Eigen::Matrix3d globalToMagRotation) {
     using Eigen::Vector3d, Eigen::Matrix3d, std::sin, std::cos, std::acos,
         std::atan2;
-
-    // TODO: Read this from table and cite
-    double g_10 = -29404.8;
-    double g_11 = -1450.9;
-    double h_11 = 4652.5;
 
     Vector3d r_cart(sin(geoCoords.theta) * cos(geoCoords.phi),
                     sin(geoCoords.theta) * sin(geoCoords.phi),
                     cos(geoCoords.theta));
-    Vector3d z_geo(0, 0, 1);
-
-    // Calculate centered dipole basis
-    Vector3d z_cd = -Vector3d(g_11, h_11, g_10);
-    Vector3d y_cd = z_geo.cross(z_cd);
-    Vector3d x_cd = y_cd.cross(z_cd);
-
-    // Build rotation matrix
-    Matrix3d globalToMagRotation;
-    globalToMagRotation.row(0) = x_cd.normalized();
-    globalToMagRotation.row(1) = y_cd.normalized();
-    globalToMagRotation.row(2) = z_cd.normalized();
 
     Vector3d r_cd = globalToMagRotation * r_cart;
 
@@ -182,4 +166,26 @@ double epsteinFunction(double h, double r, double h0, double S1, double S2) {
     return r + S1 * (h - h0) +
            (S2 - S1) * std::log((1.0 - (S1 / (S2 * std::exp(-(h - h0))))) /
                                 (1.0 - (S1 / S2)));
+}
+
+void computeDipoleRotationMatrix(Eigen::Matrix3d& globalToMagRotation) {
+    using Eigen::Matrix3d;
+    using Eigen::Vector3d;
+
+    // TODO: Read this from table and cite
+    double g_10 = -29404.8;
+    double g_11 = -1450.9;
+    double h_11 = 4652.5;
+
+    Vector3d z_geo(0, 0, 1);
+
+    // Calculate centered dipole basis
+    Vector3d z_cd = -Vector3d(g_11, h_11, g_10);
+    Vector3d y_cd = z_geo.cross(z_cd);
+    Vector3d x_cd = y_cd.cross(z_cd);
+
+    // Build rotation matrix
+    globalToMagRotation.row(0) = x_cd.normalized();
+    globalToMagRotation.row(1) = y_cd.normalized();
+    globalToMagRotation.row(2) = z_cd.normalized();
 }

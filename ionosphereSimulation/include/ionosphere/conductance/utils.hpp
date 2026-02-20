@@ -1,5 +1,7 @@
 #pragma once
 #include "ionosphere/utils/Grid.hpp"
+
+#include <Eigen/Dense>
 #include <nlohmann/json>
 #define SUNFREQ .0172019715
 
@@ -48,7 +50,8 @@ double computeSolarZenith(double utTime, double ttTime, GeoGeo coords);
 void computeGrenaTimescales(double& utTime, double& ttTime, int year, int month,
                             int day, int hour);
 
-void geoCentricToDipole(MagSph& magCoords, GeoSph geoCoords);
+void geoCentricToDipole(MagSph& magCoords, GeoSph geoCoords,
+                        Eigen::Matrix3d magneticRotationMatrix);
 
 // Coordinate Conversions
 GeoGeo convert(const GeoSph& sph);
@@ -68,3 +71,5 @@ double computeMagneticLocalTime(MagGeo subsolar, MagGeo observer);
 double fourierSeries(nlohmann::json coefficients, double mlt);
 
 double epsteinFunction(double h, double r, double h0, double S1, double S2);
+
+void computeDipoleRotationMatrix(Eigen::Matrix3d& globalToMagRotation);

@@ -3,20 +3,9 @@ spack:
   - trilinos@16.0.0 +mpi +shared +tpetra %gcc@13.3.0
 
   packages:
-    # 1. Force the use of Netlib LAPACK (Stable replacement for OpenBLAS)
-
-    # 3. Keep MPI / Trilinos on GCC
-    gcc:
-      externals:
-      - spec: gcc@13.3.0 languages:='c,c++'
-        prefix: /usr
-        extra_attributes:
-          compilers:
-            c: /usr/bin/gcc
-            cxx: /usr/bin/g++
     mpi:
       require:
-      - openmpi
+      - openmpi +fortran
 
   view: true
   concretizer:
