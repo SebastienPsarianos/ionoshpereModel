@@ -26,35 +26,38 @@ void LegacyMHDConversion::processLegacyOutput(
         throw std::runtime_error("Failed opening radial current data");
     }
 
+    std::vector<double> thVals = std::vector<double>((nPh + 1) * (nTh + 1));
+    std::vector<double> phVals = std::vector<double>((nPh + 1) * (nTh + 1));
+    std::vector<double> sourceVals = std::vector<double>((nPh + 1) * (nTh + 1));
+
     if (comm->getRank() == 0) {
         std::string line;
         std::getline(jrData, line); // Ignore the line with the grid sizes
-        for (int th = 0; th < nTh; th++) {
-            for (int ph = 0; ph < nPh; ph++) {
+        for (int th = 0; th < nTh + 1; th++) {
+            for (int ph = 0; ph < nPh + 1; ph++) {
                 if (std::getline(jrData, line)) {
-                    double thetaVal, phiVal, radVal;
-
-                    if (std::sscanf(line.c_str(), "%lf %lf %lf", &thetaVal,
-                                    &phiVal, &radVal) != 3) {
-                        throw std::runtime_error("Error parsing line" + line);
-                    }
 
                     long long globalId = ph * nTh + th;
-
-                    rootCoords->replaceGlobalValue(globalId, 0, thetaVal);
-                    rootCoords->replaceGlobalValue(globalId, 1, phiVal);
-                    rootSourceTerm->replaceGlobalValue(globalId, radVal);
-
+                    if (std::sscanf(line.c_str(), "%lf %lf %lf",
+                                    &thVals[globalId], &phVals[globalId],
+                                    &sourceVals[globalId]) != 3) {
+                        throw std::runtime_error("Error parsing line" + line);
+                    }
                 } else {
                     throw std::length_error(
                         "File length doesn't match provided coordinates");
                 }
             }
         }
-        dTh = rootCoords->getData(0)[1] - rootCoords->getData(0)[0];
-        dPh = rootCoords->getData(1)[nPh] - rootCoords->getData(1)[0];
+        dTh = thVals[1] - thVals[0];
+        dPh = phVals[nPh] - phVals[0];
     }
 
+    for (int th = 0; th < (nTh + 1); th++) {
+        for (int ph = 0; ph < nPh + 1; ph++) {
+            long long globalId = ph * nTh + th;
+        }
+    }
     comm->broadcast(0, sizeof(int), (char*)&dPh);
     comm->broadcast(0, sizeof(int), (char*)&dTh);
 
@@ -72,9 +75,13 @@ void LegacyMHDConversion::getGridSize(std::string filename, int* nTh,
     if (!dataFile.is_open()) {
         throw std::runtime_error("Failed opening radial current data");
     }
+    int tempNTh = 0;
+    int tempNPh = 0;
 
     std::string line;
     if (std::getline(dataFile, line)) {
-        std::sscanf(line.c_str(), "nTh: %d, nPh: %d", nTh, nPh);
+        std::sscanf(line.c_str(), "nTh: %d, nPh: %d", &tempNTh, &tempNPh);
     }
+    *nTh = tempNTh - 1;
+    *nPh = tempNPh - 1;
 }
