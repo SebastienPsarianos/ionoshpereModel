@@ -1,5 +1,5 @@
 #include "ionosphere/utils/Coordinates.hpp"
-
+#include <cmath>
 void calculateCoords(Grid<GeoSph>& coordinates) {
     const size_t nTh = coordinates.nTh;
     const size_t nPh = coordinates.nPh;

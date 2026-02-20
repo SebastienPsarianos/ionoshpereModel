@@ -1,7 +1,15 @@
 #pragma once
+#include "Teuchos_RCPDecl.hpp"
+#include "Tpetra_Map_fwd.hpp"
+#include "Tpetra_MultiVector_decl.hpp"
 #include <iostream>
 #include <optional>
 #include <vector>
+
+typedef Teuchos::RCP<const Teuchos::Comm<int>> CommRcp;
+typedef Teuchos::RCP<Tpetra::Map<int, long long>> MapRcp;
+typedef Teuchos::RCP<Tpetra::MultiVector<double, int, long long>>
+    MultiVectorRcp;
 
 struct {
     double x;
