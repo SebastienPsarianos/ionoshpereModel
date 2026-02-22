@@ -6,21 +6,19 @@ class TlSolver : Solver {
     TlSolver(size_t nTh, size_t nPh, double dPh, double dTh, MapRcp map);
 
     // TODO: Fix solver
-    void calculatePotential(MultiVectorRcp radCurrent,
-                            MultiVectorRcp conductance, MultiVectorRcp coords);
+    VectorRcp calculatePotential(MultiVectorRcp conductance,
+                                 MultiVectorRcp coords, VectorRcp sourceTerm);
 
   private:
-    void _buildGrid(MultiVectorRcp radCurrent, MultiVectorRcp conductance,
-                    MultiVectorRcp coords);
+    MultiVectorRcp _calculateCoefficients(MultiVectorRcp conductance,
+                                          MultiVectorRcp coords);
 
-    void _calculateCoefficients(MultiVectorRcp conductance,
-                                MultiVectorRcp coords);
+    VectorRcp _buildSourceVector(MultiVectorRcp sourceTerm);
 
-    size_t _nTh;
-    size_t _nPh;
+    CrsMatrixRcp _buildGrid(MultiVectorRcp coords, MultiVectorRcp coefficients);
+
     double _dTh;
     double _dPh;
 
     MapRcp _map;
-    MultiVectorRcp _coefficients;
 };

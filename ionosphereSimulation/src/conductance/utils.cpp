@@ -81,7 +81,8 @@ double computeSolarZenith(double utTime, double ttTime, GeoGeo coords) {
         asin(sin(coords.latitude) * sin(declination) +
              cos(coords.latitude) * cos(declination) * cos(hourAngle));
 
-    // elevationAngle = elevationAngle - 4.26e-5 * cos(elevationAngle);
+    // TODO: Why did I g et rid of this??
+    //   elevationAngle = elevationAngle - 4.26e-5 * cos(elevationAngle);
 
     return M_PI / 2 - elevationAngle;
 }

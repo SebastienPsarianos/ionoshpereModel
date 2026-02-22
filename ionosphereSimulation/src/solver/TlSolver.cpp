@@ -1,25 +1,63 @@
 #include "ionosphere/solver/TlSolver.hpp"
+#include "BelosBlockGmresSolMgr.hpp"
+#include <BelosLinearProblem.hpp> // Good practice to include this explicitly too
+#include <BelosTpetraAdapter.hpp>
+
+#include "Teuchos_DataAccess.hpp"
 #include "Tpetra_CrsMatrix_decl.hpp"
+#include "Tpetra_Operator.hpp"
+#include "ionosphere/utils/Grid.hpp"
 #include <cmath>
 
 // TODO: Figure out if this needs to be a class
 TlSolver::TlSolver(size_t nTh, size_t nPh, double dPh, double dTh, MapRcp map)
-    : Solver(nTh, nPh), _nTh(nTh), _nPh(nPh), _dTh(dTh), _dPh(dPh), _map(map),
-      _coefficients(new Tpetra::MultiVector<double, int, long long>(map, 4)) {}
+    : Solver(nTh, nPh), _dTh(dTh), _dPh(dPh), _map(map) {}
 
-void TlSolver::calculatePotential(MultiVectorRcp radCurrent,
-                                  MultiVectorRcp conductance,
-                                  MultiVectorRcp coords) {
-    _buildGrid(radCurrent, conductance, coords);
-    _calculateCoefficients(conductance, coords);
+VectorRcp TlSolver::calculatePotential(MultiVectorRcp conductance,
+                                       MultiVectorRcp coords,
+                                       VectorRcp sourceTerm) {
+    MultiVectorRcp coefficients = _calculateCoefficients(conductance, coords);
+    CrsMatrixRcp A = _buildGrid(coords, coefficients);
+    auto x = Teuchos::rcp(
+        new Tpetra::Vector<double, int, long long>(*sourceTerm, Teuchos::Copy));
+
+    x->putScalar(0);
+    auto problem = Teuchos::rcp(
+        new Belos::LinearProblem<double,
+                                 Tpetra::MultiVector<double, int, long long>,
+                                 Tpetra::Operator<double, int, long long>>(
+            A, x, sourceTerm));
+    if (!problem->setProblem()) {
+        std::cout << "EEEEE";
+    }
+
+    auto solverParams = Teuchos::parameterList();
+    solverParams->set("Maximum Iterations", 1000);
+    solverParams->set("Convergence Tolerance", 1e-8);
+
+    Belos::BlockGmresSolMgr<double, Tpetra::MultiVector<double, int, long long>,
+                            Tpetra::Operator<double, int, long long>>
+        solver(problem, solverParams);
+
+    Belos::ReturnType result = solver.solve();
+
+    if (result == Belos::Converged) {
+        std::cout << "WOHOOOO";
+    } else {
+        std::cout << "AAAAAAAAA";
+    }
+
+    return x;
 }
 
-void TlSolver::_buildGrid(MultiVectorRcp radCurrent, MultiVectorRcp conductance,
-                          MultiVectorRcp coords) {
-    auto ththCoefficients = _coefficients->getDataNonConst(0);
-    auto phphCoefficients = _coefficients->getDataNonConst(1);
-    auto thCoefficients = _coefficients->getDataNonConst(2);
-    auto phCoefficients = _coefficients->getDataNonConst(3);
+CrsMatrixRcp TlSolver::_buildGrid(MultiVectorRcp coords,
+                                  MultiVectorRcp coefficients) {
+
+    auto ththCoefficients = coefficients->getDataNonConst(0);
+    auto phphCoefficients = coefficients->getDataNonConst(1);
+    auto thCoefficients = coefficients->getDataNonConst(2);
+    auto phCoefficients = coefficients->getDataNonConst(3);
+
     auto th = coords->getDataNonConst(0);
     auto ph = coords->getDataNonConst(1);
 
@@ -80,14 +118,18 @@ void TlSolver::_buildGrid(MultiVectorRcp radCurrent, MultiVectorRcp conductance,
 
         A->insertGlobalValues(gridPoint, matrixIdcs, vals);
     }
+    A->fillComplete();
+
+    return A;
 }
 
-void TlSolver::_calculateCoefficients(MultiVectorRcp conductance,
-                                      MultiVectorRcp coords) {
+MultiVectorRcp TlSolver::_calculateCoefficients(MultiVectorRcp conductance,
+                                                MultiVectorRcp coords) {
     auto D_th = Teuchos::rcp(new Tpetra::CrsMatrix<>(_map, 3));
     auto D_ph = Teuchos::rcp(new Tpetra::CrsMatrix<>(_map, 3));
     auto myGridPointsGlobal = _map->getMyGlobalIndices();
 
+    // Build first derivative matrices
     for (size_t i = 0; i < myGridPointsGlobal.size(); i++) {
         long long currentPoint = myGridPointsGlobal[i];
 
@@ -99,53 +141,34 @@ void TlSolver::_calculateCoefficients(MultiVectorRcp conductance,
         Teuchos::Array<long long> matrixIdcs_ph;
         Teuchos::Array<double> vals_ph;
 
-        // TODO: Grab these
-        double _dTh = 1.0;
-        double _dPh = 1.0;
+        size_t left = currentPoint - _nTh;
+        size_t right = currentPoint + _nTh;
+        size_t up = currentPoint - 1;
+        size_t down = currentPoint + 1;
 
-        // Pole boundary condition (wraps over the pole since we have moved
-        // the grid down by 0.5)
         if (theta == 0) {
             size_t oppositePhi = (phi + _nPh / 2) % _nPh;
-            size_t oppositePoint = oppositePhi * _nTh;
-
-            matrixIdcs_th.push_back(currentPoint + 1);
-            vals_th.push_back(1.0 / (2 * _dTh));
-            matrixIdcs_th.push_back(oppositePoint);
-            vals_th.push_back(-1.0 / (2 * _dTh));
+            up = oppositePhi * _nTh;
         } else if (theta == _nTh - 1) {
             size_t oppositePhi = (phi + _nPh / 2) % _nPh;
-            size_t oppositePoint = oppositePhi * _nTh + theta;
-
-            matrixIdcs_th.push_back(oppositePoint);
-            vals_th.push_back(1.0 / (2 * _dTh));
-            matrixIdcs_th.push_back(currentPoint - 1);
-            vals_th.push_back(-1.0 / (2 * _dTh));
-        } else {
-            matrixIdcs_th.push_back(currentPoint + 1);
-            vals_th.push_back(1.0 / (2 * _dTh));
-            matrixIdcs_th.push_back(currentPoint - 1);
-            vals_th.push_back(-1.0 / (2 * _dTh));
+            down = oppositePhi * _nTh + theta;
         }
 
-        if (phi == 0) { // Phi Boundary (wraps around)
-            size_t wrapPoint = theta + (_nPh - 1) * _nTh;
-
-            matrixIdcs_ph.push_back(currentPoint + _nTh);
-            vals_ph.push_back(1.0 / (2 * _dPh));
-            matrixIdcs_ph.push_back(wrapPoint);
-            vals_ph.push_back(-1.0 / (2 * _dPh));
+        if (phi == 0) {
+            left = theta + (_nPh - 1) * _nTh;
         } else if (phi == _nPh - 1) {
-            matrixIdcs_ph.push_back(theta);
-            vals_ph.push_back(1.0 / (2 * _dPh));
-            matrixIdcs_ph.push_back(currentPoint - _nTh);
-            vals_ph.push_back(-1.0 / (2 * _dPh));
-        } else {
-            matrixIdcs_ph.push_back(currentPoint + _nTh);
-            vals_ph.push_back(1.0 / (2 * _dPh));
-            matrixIdcs_ph.push_back(currentPoint - _nTh);
-            vals_ph.push_back(-1.0 / (2 * _dPh));
+            right = theta;
         }
+
+        matrixIdcs_th.push_back(down);
+        vals_th.push_back(1.0 / (2 * _dTh));
+        matrixIdcs_th.push_back(up);
+        vals_th.push_back(-1.0 / (2 * _dTh));
+
+        matrixIdcs_ph.push_back(right);
+        vals_ph.push_back(1.0 / (2 * _dPh));
+        matrixIdcs_ph.push_back(left);
+        vals_ph.push_back(-1.0 / (2 * _dPh));
 
         D_th->insertGlobalValues(currentPoint, matrixIdcs_th, vals_th);
         D_ph->insertGlobalValues(currentPoint, matrixIdcs_ph, vals_ph);
@@ -153,16 +176,13 @@ void TlSolver::_calculateCoefficients(MultiVectorRcp conductance,
     D_th->fillComplete();
     D_ph->fillComplete();
 
-    // Stored in the order given in O.Amm equation 2
+    // Create multivectors containing the terms in the coefficients where the
+    // derivative is taken. Stored in the order given in O.Amm equation 2
     auto thDerToTake =
         Teuchos::rcp(new Tpetra::MultiVector<double, int, long long>(_map, 2));
     auto phDerToTake =
         Teuchos::rcp(new Tpetra::MultiVector<double, int, long long>(_map, 2));
 
-    auto thDer =
-        Teuchos::rcp(new Tpetra::MultiVector<double, int, long long>(_map, 2));
-    auto phDer =
-        Teuchos::rcp(new Tpetra::MultiVector<double, int, long long>(_map, 2));
     auto thd1 = thDerToTake->getDataNonConst(0);
     auto thd2 = thDerToTake->getDataNonConst(1);
     auto phd1 = phDerToTake->getDataNonConst(0);
@@ -194,13 +214,24 @@ void TlSolver::_calculateCoefficients(MultiVectorRcp conductance,
             pedersonVals[i] + (hallVals[i] * hallVals[i] * sin_e * sin_e) / C;
     }
 
+    // Apply derivatives to terms as mentioned above
+    auto thDer =
+        Teuchos::rcp(new Tpetra::MultiVector<double, int, long long>(_map, 2));
+    auto phDer =
+        Teuchos::rcp(new Tpetra::MultiVector<double, int, long long>(_map, 2));
+
     D_th->apply(*thDerToTake, *thDer);
     D_ph->apply(*phDerToTake, *phDer);
 
-    auto kappa_thth = _coefficients->getDataNonConst(0);
-    auto kappa_phph = _coefficients->getDataNonConst(1);
-    auto kappa_th = _coefficients->getDataNonConst(2);
-    auto kappa_ph = _coefficients->getDataNonConst(3);
+    // Build PDE-coefficient multi-vector
+
+    auto coefficients =
+        Teuchos::rcp(new Tpetra::MultiVector<double, int, long long>(_map, 4));
+
+    auto kappa_thth = coefficients->getDataNonConst(0);
+    auto kappa_phph = coefficients->getDataNonConst(1);
+    auto kappa_th = coefficients->getDataNonConst(2);
+    auto kappa_ph = coefficients->getDataNonConst(3);
 
     thd1 = thDer->getDataNonConst(0);
     thd2 = thDer->getDataNonConst(1);
@@ -231,4 +262,6 @@ void TlSolver::_calculateCoefficients(MultiVectorRcp conductance,
         kappa_ph[i] = thd2[i] + (1 / (sin * sin)) * phd2[i] -
                       (parallelVals[i] * hallVals[i] * cos_e * cot) / (C * sin);
     }
+
+    return coefficients;
 }

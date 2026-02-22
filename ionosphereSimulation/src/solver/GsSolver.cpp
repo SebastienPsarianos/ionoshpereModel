@@ -7,7 +7,7 @@
 GsSolver::GsSolver(Grid<double>& potential, size_t nTh, size_t nPh,
                    Grid<GeoSph>& coords, Grid<double>& radCurrent,
                    Grid<Sigma>& conductance, Grid<DSigma>& dConductance)
-    : Solver(nTh, nPh), _radCurrent(radCurrent), _coords(coords),
+    : _nTh(nTh), _nPh(nPh), _radCurrent(radCurrent), _coords(coords),
       _potential(potential), _conductance(conductance),
       _dConductance(dConductance), _kappa(nTh, nPh) {
 

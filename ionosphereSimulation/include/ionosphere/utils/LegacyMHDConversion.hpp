@@ -1,4 +1,3 @@
-#include "Grid.hpp"
 #include "Teuchos_RCPDecl.hpp"
 #include "Tpetra_Vector_decl.hpp"
 #include <string>
@@ -9,6 +8,8 @@ class LegacyMHDConversion {
         std::string filename, double& dTh, double& dPh,
         Teuchos::RCP<Tpetra::MultiVector<double, int, long long>> coords,
         Teuchos::RCP<Tpetra::Vector<double, int, long long>> sourceTerm,
-        Teuchos::RCP<const Teuchos::Comm<int>> comm, int nTh, int nPh);
-    static void getGridSize(std::string filename, int* nTh, int* nPh);
+        Teuchos::RCP<const Teuchos::Comm<int>> comm, int nTh, int nPh,
+        double THETA0);
+    static void getGridSize(std::string filename, int* nTh, int* nPh,
+                            Teuchos::RCP<const Teuchos::Comm<int>> comm);
 };
