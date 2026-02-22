@@ -15,6 +15,8 @@ class GsSolver {
     double _dPh;
     double _dTh2;
     double _dPh2;
+    double _nTh;
+    double _nPh;
 
     Grid<double>& _radCurrent;
     Grid<GeoSph>& _coords;

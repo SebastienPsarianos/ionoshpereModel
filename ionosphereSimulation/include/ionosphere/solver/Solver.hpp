@@ -9,9 +9,8 @@ class Solver {
         _nPh = nPh;
     }
 
-    virtual void calculatePotential(MultiVectorRcp radCurrent,
-                                    MultiVectorRcp conductance,
-                                    MultiVectorRcp coords) = 0;
+    void calculatePotential(MultiVectorRcp conductance, MultiVectorRcp coords,
+                            VectorRcp sourceTerm);
 
   protected:
     size_t _nTh;
