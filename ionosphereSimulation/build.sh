@@ -8,8 +8,15 @@ else
     exit 1
 fi
 
-spack env activate .
-spack install
+if [[ "$(uname)" == "Darwin" ]]; then
+    SPACK_ENV_DIR="."
+else
+    SPACK_ENV_DIR="spack-linux"
+fi
+
+spack env activate "$SPACK_ENV_DIR"
+spack concretize -f --deprecated
+spack install --deprecated
 
 VIEW_PATH="$SPACK_ENV/.spack-env/view"
 cd build
