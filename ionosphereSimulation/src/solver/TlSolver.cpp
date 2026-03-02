@@ -32,8 +32,19 @@ VectorRcp TlSolver::calculatePotential(MultiVectorRcp conductance,
     }
 
     auto solverParams = Teuchos::parameterList();
-    solverParams->set("Maximum Iterations", 1000);
-    solverParams->set("Convergence Tolerance", 1e-8);
+    solverParams->set("Maximum Iterations", 100000);
+    solverParams->set("Convergence Tolerance", 1e-6);
+
+    int verbosity = Belos::Errors + Belos::Warnings + Belos::IterationDetails +
+                    Belos::FinalSummary + Belos::TimingDetails +
+                    Belos::StatusTestDetails;
+
+    solverParams->set("Verbosity", verbosity);
+
+    // Optional but highly recommended for readability:
+    // Prints a nice clean table instead of massive blocks of text
+    solverParams->set("Output Style", Belos::Brief);
+    solverParams->set("Output Frequency", 1);
 
     Belos::BlockGmresSolMgr<double, Tpetra::MultiVector<double, int, long long>,
                             Tpetra::Operator<double, int, long long>>

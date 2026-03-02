@@ -29,7 +29,30 @@ int main(int argc, char* argv[]) {
     Teuchos::RCP<const Teuchos::Comm<int>> comm = Tpetra::getDefaultComm();
 
     if (argc < 2) {
-        std::cerr << "Missing filename for Radial Current data" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " [-t|-m] <input_file>"
+                  << std::endl;
+        return -1;
+    }
+
+    bool useTecplot = true;
+    std::string inputFile;
+
+    if (argc == 2) {
+        inputFile = argv[1];
+    } else if (argc == 3) {
+        std::string flag = argv[1];
+        if (flag == "-m") {
+            useTecplot = false;
+        } else if (flag != "-t") {
+            std::cerr << "Unknown flag: " << flag
+                      << ". Use -t for TecPlot or -m for matplotlib."
+                      << std::endl;
+            return -1;
+        }
+        inputFile = argv[2];
+    } else {
+        std::cerr << "Usage: " << argv[0] << " [-t|-m] <input_file>"
+                  << std::endl;
         return -1;
     }
 
@@ -38,7 +61,7 @@ int main(int argc, char* argv[]) {
     double dTh = -1;
     double dPh = -1;
 
-    LegacyMHDConversion::getGridSize(argv[1], &nTh, &nPh, comm);
+    LegacyMHDConversion::getGridSize(inputFile, &nTh, &nPh, comm);
     if (nTh <= 0 || nPh <= 0) {
         throw std::runtime_error(
             "Error reading source term data, ending execution");
@@ -56,9 +79,8 @@ int main(int argc, char* argv[]) {
     auto potential2 =
         Teuchos::rcp(new Tpetra::Vector<double, int, long long>(map));
 
-    LegacyMHDConversion::processLegacyOutput(std::string(argv[1]), dTh, dPh,
-                                             coords2, sourceTerm, comm, nTh,
-                                             nPh, THETA0);
+    LegacyMHDConversion::processLegacyOutput(
+        inputFile, dTh, dPh, coords2, sourceTerm, comm, nTh, nPh, THETA0);
 
     EmpConductance(conductance2, coords2, nTh, nPh, SIG0, YEAR, DAY, MONTH,
                    HOUR, map)
@@ -69,8 +91,13 @@ int main(int argc, char* argv[]) {
     VectorRcp result =
         test.calculatePotential(conductance2, coords2, sourceTerm);
 
-    exportToTecplot("../data/test3.dat", coords2, result, sourceTerm, comm, nTh,
-                    nPh);
+    if (useTecplot) {
+        exportToTecplot("../data/test3.dat", coords2, result, sourceTerm, comm,
+                        nTh, nPh);
+    } else {
+        exportToMatplotlib("../data/solvedPotential.txt", coords2, result,
+                           sourceTerm, comm, nTh, nPh);
+    }
     return 0;
 
     // TODO: Proper post-processing, including J and others

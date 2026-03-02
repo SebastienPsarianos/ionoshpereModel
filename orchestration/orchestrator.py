@@ -2,6 +2,7 @@ import subprocess
 import shutil
 import os
 import glob
+import argparse
 
 LEGACY_LOCATION = "../legacySolution/src/"
 LEGACY_EXEC = "ionosphere.exe"
@@ -32,7 +33,7 @@ def cleanup():
             print(f"Error deleting {file_path}: {e}")
 
 
-def runProcesses():
+def runProcesses(output_flag='-t'):
     subprocess.run(["make", "ionosphere"],
                    cwd=LEGACY_LOCATION,
                    stdout=subprocess.DEVNULL,
@@ -74,7 +75,7 @@ def runProcesses():
         print("Compiled file not found")
         return 0
 
-    subprocess.run(["./" + NEW_EXEC, "../data/sim_input.txt"],
+    subprocess.run(["./" + NEW_EXEC, output_flag, "../data/sim_input.txt"],
                    cwd=NEW_BUILD_LOCATION,
                    check=True)
 
@@ -90,5 +91,17 @@ def runProcesses():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Run ionosphere simulation pipeline.")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-t', '--tecplot', dest='output_flag',
+                       action='store_const', const='-t',
+                       help='Output in TecPlot format (default)')
+    group.add_argument('-m', '--matplotlib', dest='output_flag',
+                       action='store_const', const='-m',
+                       help='Output in matplotlib format for plot2.py')
+    parser.set_defaults(output_flag='-t')
+    args = parser.parse_args()
+
     cleanup()
-    runProcesses()
+    runProcesses(args.output_flag)
