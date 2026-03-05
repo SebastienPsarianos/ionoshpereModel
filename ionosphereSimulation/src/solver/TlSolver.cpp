@@ -1,4 +1,5 @@
 #include "ionosphere/solver/TlSolver.hpp"
+
 #include "BelosBlockGmresSolMgr.hpp"
 #include "Ifpack2_Factory.hpp"
 #include "Teuchos_DataAccess.hpp"
@@ -11,16 +12,18 @@
 #include <cmath>
 #include <stdexcept>
 
+using namespace Ionosphere;
+
 // TODO: Figure out if this needs to be a class
-TlSolver::TlSolver(size_t nTh, size_t nPh, double dPh, double dTh, MapRcp map)
+TlSolver::TlSolver(size_t nTh, size_t nPh, double dPh, double dTh, MapRCP map)
     : Solver(nTh, nPh), _dTh(dTh), _dPh(dPh), _map(map) {}
 
-VectorRcp TlSolver::calculatePotential(MultiVectorRcp conductance,
-                                       MultiVectorRcp coords,
-                                       VectorRcp sourceTerm) {
+VectorRCP TlSolver::calculatePotential(MultiVectorRCP conductance,
+                                       MultiVectorRCP coords,
+                                       VectorRCP sourceTerm) {
 
-    MultiVectorRcp coefficients = _calculateCoefficients(conductance, coords);
-    CrsMatrixRcp A = _buildGrid(coords, coefficients);
+    MultiVectorRCP coefficients = _calculateCoefficients(conductance, coords);
+    MatrixRCP A = _buildGrid(coords, coefficients);
 
     using prec_type = Ifpack2::Preconditioner<double, int, long long>;
 
@@ -42,7 +45,7 @@ VectorRcp TlSolver::calculatePotential(MultiVectorRcp conductance,
         new Tpetra::Vector<double, int, long long>(*sourceTerm, Teuchos::Copy));
     rhs->scale(RADIUS_EARTH_2);
 
-    // TODO: Testing
+    // TODO: Testing the pin point right now
     long long pinPoint = _nTh / 2;
     if (rhs->getMap()->isNodeGlobalElement(pinPoint)) {
         auto rhsData = rhs->getDataNonConst();
@@ -88,8 +91,8 @@ VectorRcp TlSolver::calculatePotential(MultiVectorRcp conductance,
     return x;
 }
 
-CrsMatrixRcp TlSolver::_buildGrid(MultiVectorRcp coords,
-                                  MultiVectorRcp coefficients) {
+MatrixRCP TlSolver::_buildGrid(MultiVectorRCP coords,
+                               MultiVectorRCP coefficients) {
 
     auto ththCoefficients = coefficients->getDataNonConst(0);
     auto phphCoefficients = coefficients->getDataNonConst(1);
@@ -115,6 +118,7 @@ CrsMatrixRcp TlSolver::_buildGrid(MultiVectorRcp coords,
         vals.push_back(-2 * ththCoefficients[i] / (_dTh * _dTh) -
                        2 * phphCoefficients[i] / (_dPh * _dPh));
 
+        // TODO: Figure out if this is needed
         long long pinPoint = _nTh / 2; // equator, phi=0
         if (gridPoint == pinPoint) {
             Teuchos::Array<long long> matrixIdcs;
@@ -171,8 +175,8 @@ CrsMatrixRcp TlSolver::_buildGrid(MultiVectorRcp coords,
     return A;
 }
 
-MultiVectorRcp TlSolver::_calculateCoefficients(MultiVectorRcp conductance,
-                                                MultiVectorRcp coords) {
+MultiVectorRCP TlSolver::_calculateCoefficients(MultiVectorRCP conductance,
+                                                MultiVectorRCP coords) {
     auto D_th = Teuchos::rcp(new Tpetra::CrsMatrix<>(_map, 3));
     auto D_ph = Teuchos::rcp(new Tpetra::CrsMatrix<>(_map, 3));
     auto myGridPointsGlobal = _map->getMyGlobalIndices();
@@ -272,7 +276,6 @@ MultiVectorRcp TlSolver::_calculateCoefficients(MultiVectorRcp conductance,
     D_ph->apply(*phDerToTake, *phDer);
 
     // Build PDE-coefficient multi-vector
-
     auto coefficients =
         Teuchos::rcp(new Tpetra::MultiVector<double, int, long long>(_map, 4));
 

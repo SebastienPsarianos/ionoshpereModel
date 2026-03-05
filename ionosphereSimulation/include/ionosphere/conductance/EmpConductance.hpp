@@ -1,18 +1,16 @@
 #pragma once
-#include "ionosphere/utils/Grid.hpp"
+#include "ionosphere/IonosphereTypes.hpp"
 
 #include <Eigen/Dense>
-#include <Teuchos_Comm.hpp>
-#include <Teuchos_RCPDecl.hpp>
-#include <Tpetra_Map_fwd.hpp>
-#include <Tpetra_MultiVector_decl.hpp>
 #include <nlohmann/json>
 
 class EmpConductance {
+
   public:
-    EmpConductance(MultiVectorRcp& sigma, MultiVectorRcp& coords, size_t nTh,
-                   size_t nPh, double sig0, int year, int day, int month,
-                   int hour, MapRcp map);
+    EmpConductance(Ionosphere::MultiVectorRCP sigma,
+                   Ionosphere::MultiVectorRCP coords, Ionosphere::MapRCP map,
+                   Ionosphere::Scalar sig0, size_t nTh, size_t nPh, int year,
+                   int day, int month, int hour);
 
     void computeConductance(int kp, double f107);
 
@@ -22,11 +20,11 @@ class EmpConductance {
     void _computeHppConductance();
     void _readAndSyncJson(Teuchos::RCP<const Teuchos::Comm<int>> comm);
 
-    MapRcp _map;
-    MultiVectorRcp _sigma;
-    MultiVectorRcp _coords;
-    MultiVectorRcp _euvConductance;
-    MultiVectorRcp _auroralConductance;
+    Ionosphere::MapRCP _map;
+    Ionosphere::MultiVectorRCP _sigma;
+    Ionosphere::MultiVectorRCP _coords;
+    Ionosphere::MultiVectorRCP _euvConductance;
+    Ionosphere::MultiVectorRCP _auroralConductance;
 
     nlohmann::json _coefficientJson;
 
