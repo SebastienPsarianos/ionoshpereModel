@@ -17,9 +17,6 @@ class EmpConductance {
     void computeConductance(int kp, double f107);
 
   private:
-    void _calcSigmaDer(Grid<DSigma>& dsigma, Grid<Sigma>& sigma,
-                       Grid<GeoSph>& coords);
-
     void _computeAuroralConductance(int kp);
     void _computeEuvConductance(double f107);
     void _computeHppConductance();

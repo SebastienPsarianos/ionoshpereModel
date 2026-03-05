@@ -141,17 +141,39 @@ void EmpConductance::_computeAuroralConductance(int kp) {
 
         double mlat = convert(observerPositionMag).latitude;
 
-        pedersonConductances[i] =
-            epsteinFunction(mlat, fourierSeries(pedersonData["max_value"], mlt),
-                            fourierSeries(pedersonData["max_latitude"], mlt),
-                            fourierSeries(pedersonData["up_slope"], mlt),
-                            fourierSeries(pedersonData["down_slope"], mlt));
-        hallConductances[i] =
-            epsteinFunction(convert(observerPositionMag).latitude,
-                            fourierSeries(hallData["max_value"], mlt),
-                            fourierSeries(hallData["max_latitude"], mlt),
-                            fourierSeries(hallData["up_slope"], mlt),
-                            fourierSeries(hallData["down_slope"], mlt));
+        // TODO: Testing
+        double mlatDeg = mlat * 180.0 / M_PI;
+        if (std::abs(mlatDeg) < 50.0) {
+            pedersonConductances[i] = 0.0;
+            hallConductances[i] = 0.0;
+            continue;
+        }
+
+        double pedH0 = fourierSeries(pedersonData["max_latitude"], mlt);
+        double hallH0 = fourierSeries(hallData["max_latitude"], mlt);
+
+        double pedVal = epsteinFunction(
+            std::abs(mlatDeg), fourierSeries(pedersonData["max_value"], mlt),
+            pedH0, fourierSeries(pedersonData["up_slope"], mlt),
+            fourierSeries(pedersonData["down_slope"], mlt));
+
+        double hallVal = epsteinFunction(
+            std::abs(mlatDeg), fourierSeries(hallData["max_value"], mlt),
+            hallH0, fourierSeries(hallData["up_slope"], mlt),
+            fourierSeries(hallData["down_slope"], mlt));
+
+        // TODO: Testing
+        if (std::abs(mlatDeg) < pedH0) {
+            pedersonConductances[i] = std::max(0.0, pedVal);
+        } else {
+            pedersonConductances[i] = std::max(0.55, pedVal);
+        }
+
+        if (std::abs(mlatDeg) < hallH0) {
+            hallConductances[i] = std::max(0.0, hallVal);
+        } else {
+            hallConductances[i] = std::max(0.55, hallVal);
+        }
     }
 }
 
@@ -176,50 +198,11 @@ void EmpConductance::_computeHppConductance() {
                  pedersonConductancesEuv[i] * pedersonConductancesEuv[i]);
 
         hppParallelConductance[i] = _sig0;
-    }
-}
-void EmpConductance::_calcSigmaDer(Grid<DSigma>& dConductance,
-                                   Grid<Sigma>& sigma, Grid<GeoSph>& coords) {
 
-    const double dTh = coords(1, 0).theta - coords(0, 0).theta;
-    const double dPh = coords(0, 1).phi - coords(0, 0).phi;
+        // TODO: Testing
+        hppPedersonConductance[i] = std::max(hppPedersonConductance[i], 0.25);
+        hppHallConductance[i] = std::max(hppHallConductance[i], 0.25);
 
-    // TODO: Figure out pole behaviour for th
-    for (size_t th = 1; th < _nTh - 1; th++) {
-        // NOTE: Boundary points for phi should be continuous
-        //      and wrap around to the start of the phi grid.
-        //     Boundary points (phi = 0 and phi = _nPh - 1) are
-        //      calculated as derivatives between phi = 1 and nPh-2
-        dConductance(th, 0).dthph_ph =
-            (sigma(th, 1).thph - sigma(th, _nPh - 2).thph) / (2 * dPh);
-        dConductance(th, _nPh - 1).dthph_ph = dConductance(th, 0).dthph_ph;
-
-        dConductance(th, 0).dphph_ph =
-            (sigma(th, 1).phph - sigma(th, _nPh - 2).phph) / (2 * dPh);
-        dConductance(th, _nPh - 1).dphph_ph = dConductance(th, 0).dphph_ph;
-
-        // We also set the th derivatives to be equal accross the circular
-        // boundary
-        dConductance(th, 0).dthth_th =
-            (sigma(th + 1, 0).thth - sigma(th - 1, 0).thth) / (2 * dTh);
-        dConductance(th, _nPh - 1).dthth_th = dConductance(th, 0).dthth_th;
-
-        dConductance(th, 0).dthph_th =
-            (sigma(th + 1, 0).thph - sigma(th - 1, 0).thph) / (2 * dTh);
-        dConductance(th, _nPh - 1).dthph_th = dConductance(th, 0).dthph_th;
-
-        for (size_t ph = 1; ph < _nPh - 1; ph++) {
-            dConductance(th, ph).dthth_th =
-                (sigma(th + 1, ph).thth - sigma(th - 1, ph).thth) / (2 * dTh);
-
-            dConductance(th, ph).dthph_ph =
-                (sigma(th, ph + 1).thph - sigma(th, ph - 1).thph) / (2 * dPh);
-
-            dConductance(th, ph).dthph_th =
-                (sigma(th + 1, ph).thph - sigma(th - 1, ph).thph) / (2 * dTh);
-
-            dConductance(th, ph).dphph_ph =
-                (sigma(th, ph + 1).phph - sigma(th, ph - 1).phph) / (2 * dPh);
-        }
+        hppParallelConductance[i] = _sig0;
     }
 }

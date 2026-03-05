@@ -4,104 +4,61 @@ import os
 import glob
 import argparse
 
-LEGACY_LOCATION = "../legacySolution/src/"
+LEGACY_DIR = "../legacySolution/src/"
 LEGACY_EXEC = "ionosphere.exe"
-NEW_DATA_FOLDER = "../ionosphereSimulation/data/"
-NEW_FOLDER = "../ionosphereSimulation/"
-NEW_BUILD_LOCATION = "../ionosphereSimulation/build/"
-PLOTTING_FOLDER = "../data"
-NEW_EXEC = "IonosphereSolver"
+NEW_DIR = "../ionosphereSimulation/"
+NEW_DATA_DIR = "../ionosphereSimulation/data/"
+DATA_DIR = "../data"
+
+LEGACY_OUTPUT = ["sim_input.txt", "sig_out.txt",
+                 "dsig_out.txt", "pot_out.txt", "e_out.txt"]
 
 
-LEGACY_OUTPUT = ["sim_input.txt",
-                 "sig_out.txt",
-                 "dsig_out.txt",
-                 "pot_out.txt",
-                 "e_out.txt"]
-NEW_OUTPUT = ["conductance.txt", "dconductance.txt",
-              "kappa.txt", "solvedEField.txt", "solvedPotential.txt"]
+def run(cmd, **kwargs):
+    subprocess.run(cmd, check=True, **kwargs)
 
 
 def cleanup():
-    txt_files = glob.glob(os.path.join(NEW_DATA_FOLDER, '*.txt'))
-
-    for file_path in txt_files:
-        try:
-            os.remove(file_path)
-            print(f"Deleted: {file_path}")
-        except OSError as e:
-            print(f"Error deleting {file_path}: {e}")
+    for f in glob.glob(os.path.join(NEW_DATA_DIR, "*.txt")):
+        os.remove(f)
 
 
-def runProcesses(output_flag='-t'):
-    subprocess.run(["make", "ionosphere"],
-                   cwd=LEGACY_LOCATION,
-                   stdout=subprocess.DEVNULL,
-                   check=True)
+def run_pipeline(output_flag="-t"):
+    run(["make", "ionosphere"], cwd=LEGACY_DIR, stdout=subprocess.DEVNULL)
+    print("Legacy build successful")
 
-    if not os.path.exists(LEGACY_LOCATION + LEGACY_EXEC):
-        print("Compiled file not found")
-        return 0
+    run(["./" + LEGACY_EXEC], cwd=LEGACY_DIR, stdout=subprocess.DEVNULL)
+    print("Legacy simulation complete")
 
-    print("Compilation Successful")
+    for f in LEGACY_OUTPUT:
+        src = LEGACY_DIR + f
+        if os.path.exists(src):
+            shutil.move(src, NEW_DATA_DIR + f)
 
-    subprocess.run(["./" + LEGACY_EXEC],
-                   cwd=LEGACY_LOCATION,
-                   stdout=subprocess.DEVNULL,
-                   check=True)
-
-    print("Ran legacy simulation")
-
-    for FILE in LEGACY_OUTPUT:
-        if os.path.exists(LEGACY_LOCATION + FILE):
-            print("Found " + FILE + " and moved to" +
-                  shutil.move(LEGACY_LOCATION + FILE, NEW_DATA_FOLDER + FILE))
-        else:
-            print("Failed to find " + FILE)
-
-    subprocess.run(["./build.sh"],
-                   cwd=NEW_FOLDER,
-                   stdout=subprocess.DEVNULL,
-                   check=True)
-
-    subprocess.run(["make"],
-                   cwd=NEW_BUILD_LOCATION,
-                   stdout=subprocess.DEVNULL,
-                   check=True)
-
+    run(["./build.sh"], cwd=NEW_DIR, stdout=subprocess.DEVNULL)
     print("New simulation build successful")
 
-    if not os.path.exists(os.path.join(NEW_BUILD_LOCATION, NEW_EXEC)):
-        print("Compiled file not found")
-        return 0
+    run(["./run.sh", output_flag, "../data/sim_input.txt"], cwd=NEW_DIR)
 
-    subprocess.run(["./" + NEW_EXEC, output_flag, "../data/sim_input.txt"],
-                   cwd=NEW_BUILD_LOCATION,
-                   check=True)
-
-    if not os.path.exists(PLOTTING_FOLDER):
-        os.makedirs(PLOTTING_FOLDER)
-
-    if os.path.exists(NEW_DATA_FOLDER):
-        files = glob.glob(NEW_DATA_FOLDER + "*")
-        for source in files:
-            filename = os.path.basename(source)
-            print("Found " + source + " and moved to" +
-                  shutil.move(source, os.path.join(PLOTTING_FOLDER, filename)))
+    os.makedirs(DATA_DIR, exist_ok=True)
+    for src in glob.glob(NEW_DATA_DIR + "*"):
+        shutil.move(src, os.path.join(DATA_DIR, os.path.basename(src)))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Run ionosphere simulation pipeline.")
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-t', '--tecplot', dest='output_flag',
-                       action='store_const', const='-t',
-                       help='Output in TecPlot format (default)')
-    group.add_argument('-m', '--matplotlib', dest='output_flag',
-                       action='store_const', const='-m',
-                       help='Output in matplotlib format for plot2.py')
-    parser.set_defaults(output_flag='-t')
+    group.add_argument("-t", "--tecplot", dest="output_flag",
+                       action="store_const",
+                       const="-t",
+                       help="Output in TecPlot format (default)")
+    group.add_argument("-m", "--matplotlib", dest="output_flag",
+                       action="store_const",
+                       const="-m",
+                       help="Output in matplotlib format for plot2.py")
+    parser.set_defaults(output_flag="-t")
     args = parser.parse_args()
 
     cleanup()
-    runProcesses(args.output_flag)
+    run_pipeline(args.output_flag)

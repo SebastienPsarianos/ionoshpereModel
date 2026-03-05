@@ -3,6 +3,7 @@
 #include "Teuchos_Comm.hpp"
 #include <Tpetra_Core.hpp>
 #include <fstream>
+#include <iostream>
 #include <stdexcept>
 
 void LegacyMHDConversion::processLegacyOutput(
@@ -88,7 +89,7 @@ void LegacyMHDConversion::getGridSize(
             std::sscanf(line.c_str(), "nTh: %d, nPh: %d", nTh, nPh);
         }
 
-        //*nPh -= 1;
+        std::cout << nTh << " " << nPh << std::endl;
     }
 
     comm->broadcast(0, sizeof(int), (char*)nPh);

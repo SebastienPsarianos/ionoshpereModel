@@ -9,19 +9,18 @@
 #include <BelosSolverFactory.hpp>
 #include <BelosTpetraAdapter.hpp>
 #include <Tpetra_Core.hpp>
-#include <fstream>
 #include <iostream>
 #include <stdexcept>
 
 double SIG0 = 1000;
-double THETA0 = 0.001;
+double THETA0 = 0.05;
 
 int YEAR = 2026;
 int MONTH = 2;
 int DAY = 5;
 int HOUR = 5;
 
-int KP = 1;
+int KP = 6;
 int F107 = 120;
 
 int main(int argc, char* argv[]) {
