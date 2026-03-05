@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-cd "$(dirname "$0")"
+cd "$(cd "$(dirname "$0")" && pwd)"
 
 if [ -f "$HOME/spack/share/spack/setup-env.sh" ]; then
     . "$HOME/spack/share/spack/setup-env.sh"
@@ -11,9 +11,9 @@ else
 fi
 
 if [[ "$(uname)" == "Darwin" ]]; then
-    SPACK_ENV_DIR="."
+    SPACK_ENV_DIR="OSX"
 else
-    SPACK_ENV_DIR="spack-linux"
+    SPACK_ENV_DIR="linux"
 fi
 
 spack env activate "$SPACK_ENV_DIR"

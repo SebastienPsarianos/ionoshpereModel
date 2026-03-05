@@ -8,13 +8,14 @@
 #include <nlohmann/json>
 #include <string>
 
-EmpConductance::EmpConductance(MultiVectorRcp& sigma, MultiVectorRcp& coords,
-                               size_t nTh, size_t nPh, double sig0, int year,
-                               int day, int month, int hour, MapRcp map)
+EmpConductance::EmpConductance(Ionosphere::MultiVectorRCP sigma,
+                               Ionosphere::MultiVectorRCP coords,
+                               Ionosphere::MapRCP map, Ionosphere::Scalar sig0,
+                               size_t nTh, size_t nPh, int year, int day,
+                               int month, int hour)
     : _map(map), _sigma(sigma), _coords(coords),
-      _euvConductance(new Tpetra::MultiVector<double, int, long long>(map, 3)),
-      _auroralConductance(
-          new Tpetra::MultiVector<double, int, long long>(map, 3)),
+      _euvConductance(new Ionosphere::MultiVector(map, 3)),
+      _auroralConductance(new Ionosphere::MultiVector(map, 3)),
       _nTh(nTh), _nPh(nPh), _sig0(sig0) {
 
     _readAndSyncJson(map->getComm());
