@@ -1,13 +1,15 @@
 #include "ionosphere/solver/TlSolver.hpp"
 #include "BelosBlockGmresSolMgr.hpp"
-#include <BelosLinearProblem.hpp> // Good practice to include this explicitly too
-#include <BelosTpetraAdapter.hpp>
-
+#include "Ifpack2_Factory.hpp"
 #include "Teuchos_DataAccess.hpp"
 #include "Tpetra_CrsMatrix_decl.hpp"
 #include "Tpetra_Operator.hpp"
+#include "ionosphere/Constants.hpp"
 #include "ionosphere/utils/Grid.hpp"
+#include <BelosLinearProblem.hpp>
+#include <BelosTpetraAdapter.hpp>
 #include <cmath>
+#include <stdexcept>
 
 // TODO: Figure out if this needs to be a class
 TlSolver::TlSolver(size_t nTh, size_t nPh, double dPh, double dTh, MapRcp map)
@@ -16,35 +18,61 @@ TlSolver::TlSolver(size_t nTh, size_t nPh, double dPh, double dTh, MapRcp map)
 VectorRcp TlSolver::calculatePotential(MultiVectorRcp conductance,
                                        MultiVectorRcp coords,
                                        VectorRcp sourceTerm) {
+
     MultiVectorRcp coefficients = _calculateCoefficients(conductance, coords);
     CrsMatrixRcp A = _buildGrid(coords, coefficients);
-    auto x = Teuchos::rcp(
-        new Tpetra::Vector<double, int, long long>(*sourceTerm, Teuchos::Copy));
 
-    x->putScalar(0);
-    auto problem = Teuchos::rcp(
-        new Belos::LinearProblem<double,
-                                 Tpetra::MultiVector<double, int, long long>,
-                                 Tpetra::Operator<double, int, long long>>(
-            A, x, sourceTerm));
+    using prec_type = Ifpack2::Preconditioner<double, int, long long>;
+
+    Ifpack2::Factory factory;
+    Teuchos::RCP<prec_type> prec =
+        factory.create<Tpetra::CrsMatrix<double, int, long long>>("ILUT", A);
+
+    // TODO: Figure out the preconditioner parameters
+    Teuchos::ParameterList precParams;
+    precParams.set("fact: ilut level-of-fill", 2.0);
+    precParams.set("fact: drop tolerance", 1e-4);
+    prec->setParameters(precParams);
+    prec->initialize();
+    prec->compute();
+    auto x = Teuchos::rcp(new Tpetra::Vector<double, int, long long>(_map));
+    x->putScalar(0.0);
+
+    auto rhs = Teuchos::rcp(
+        new Tpetra::Vector<double, int, long long>(*sourceTerm, Teuchos::Copy));
+    rhs->scale(RADIUS_EARTH_2);
+
+    // TODO: Testing
+    long long pinPoint = _nTh / 2;
+    if (rhs->getMap()->isNodeGlobalElement(pinPoint)) {
+        auto rhsData = rhs->getDataNonConst();
+        auto localIdx = rhs->getMap()->getLocalElement(pinPoint);
+        rhsData[localIdx] = 0.0;
+    }
+
+    auto problem =
+        Teuchos::rcp(new Belos::LinearProblem<
+                     double, Tpetra::MultiVector<double, int, long long>,
+                     Tpetra::Operator<double, int, long long>>(A, x, rhs));
+
+    problem->setRightPrec(prec);
+
     if (!problem->setProblem()) {
-        std::cout << "EEEEE";
+        throw std::runtime_error("Failed to set up problem");
     }
 
     auto solverParams = Teuchos::parameterList();
-    solverParams->set("Maximum Iterations", 100000);
+    solverParams->set("Maximum Iterations", 5000);
     solverParams->set("Convergence Tolerance", 1e-6);
+    solverParams->set("Estimate Condition Number", true);
 
     int verbosity = Belos::Errors + Belos::Warnings + Belos::IterationDetails +
                     Belos::FinalSummary + Belos::TimingDetails +
                     Belos::StatusTestDetails;
 
     solverParams->set("Verbosity", verbosity);
-
-    // Optional but highly recommended for readability:
-    // Prints a nice clean table instead of massive blocks of text
     solverParams->set("Output Style", Belos::Brief);
-    solverParams->set("Output Frequency", 1);
+    solverParams->set("Output Frequency", 10);
 
     Belos::BlockGmresSolMgr<double, Tpetra::MultiVector<double, int, long long>,
                             Tpetra::Operator<double, int, long long>>
@@ -53,9 +81,8 @@ VectorRcp TlSolver::calculatePotential(MultiVectorRcp conductance,
     Belos::ReturnType result = solver.solve();
 
     if (result == Belos::Converged) {
-        std::cout << "WOHOOOO";
     } else {
-        std::cout << "AAAAAAAAA";
+        std::cout << "Failed to converge" << std::endl;
     }
 
     return x;
@@ -88,6 +115,16 @@ CrsMatrixRcp TlSolver::_buildGrid(MultiVectorRcp coords,
         vals.push_back(-2 * ththCoefficients[i] / (_dTh * _dTh) -
                        2 * phphCoefficients[i] / (_dPh * _dPh));
 
+        long long pinPoint = _nTh / 2; // equator, phi=0
+        if (gridPoint == pinPoint) {
+            Teuchos::Array<long long> matrixIdcs;
+            Teuchos::Array<double> vals;
+            matrixIdcs.push_back(gridPoint);
+            vals.push_back(1.0);
+            A->insertGlobalValues(gridPoint, matrixIdcs, vals);
+            continue; // skip normal stencil for this point
+        }
+
         size_t left = gridPoint - _nTh;
         size_t right = gridPoint + _nTh;
         size_t up = gridPoint - 1;
@@ -95,10 +132,10 @@ CrsMatrixRcp TlSolver::_buildGrid(MultiVectorRcp coords,
 
         if (theta == 0) {
             size_t oppositePhi = (phi + _nPh / 2) % _nPh;
-            up = oppositePhi * _nTh;
+            up = oppositePhi * _nTh + 1;
         } else if (theta == _nTh - 1) {
             size_t oppositePhi = (phi + _nPh / 2) % _nPh;
-            down = oppositePhi * _nTh + theta;
+            down = oppositePhi * _nTh + theta - 1;
         }
 
         if (phi == 0) {
@@ -159,10 +196,10 @@ MultiVectorRcp TlSolver::_calculateCoefficients(MultiVectorRcp conductance,
 
         if (theta == 0) {
             size_t oppositePhi = (phi + _nPh / 2) % _nPh;
-            up = oppositePhi * _nTh;
+            up = oppositePhi * _nTh + 1;
         } else if (theta == _nTh - 1) {
             size_t oppositePhi = (phi + _nPh / 2) % _nPh;
-            down = oppositePhi * _nTh + theta;
+            down = oppositePhi * _nTh + theta - 1;
         }
 
         if (phi == 0) {
