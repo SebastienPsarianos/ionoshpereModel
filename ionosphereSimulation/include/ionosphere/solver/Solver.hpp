@@ -1,5 +1,5 @@
 #pragma once
-#include "ionosphere/utils/Grid.hpp"
+#include "ionosphere/IonosphereTypes.hpp"
 #include <cstddef>
 
 class Solver {
@@ -9,8 +9,9 @@ class Solver {
         _nPh = nPh;
     }
 
-    void calculatePotential(MultiVectorRcp conductance, MultiVectorRcp coords,
-                            VectorRcp sourceTerm);
+    void calculatePotential(Ionosphere::MultiVectorRCP conductance,
+                            Ionosphere::MultiVectorRCP coords,
+                            Ionosphere::VectorRCP sourceTerm);
 
   protected:
     size_t _nTh;

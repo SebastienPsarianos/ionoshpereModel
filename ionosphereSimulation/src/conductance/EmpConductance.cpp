@@ -141,7 +141,7 @@ void EmpConductance::_computeAuroralConductance(int kp) {
 
         double mlat = convert(observerPositionMag).latitude;
 
-        // TODO: Testing
+        // TODO: Testing clamping outside of 50
         double mlatDeg = mlat * 180.0 / M_PI;
         if (std::abs(mlatDeg) < 50.0) {
             pedersonConductances[i] = 0.0;
@@ -162,7 +162,7 @@ void EmpConductance::_computeAuroralConductance(int kp) {
             hallH0, fourierSeries(hallData["up_slope"], mlt),
             fourierSeries(hallData["down_slope"], mlt));
 
-        // TODO: Testing
+        // TODO: Testing the clamping described in the paper
         if (std::abs(mlatDeg) < pedH0) {
             pedersonConductances[i] = std::max(0.0, pedVal);
         } else {
@@ -199,7 +199,7 @@ void EmpConductance::_computeHppConductance() {
 
         hppParallelConductance[i] = _sig0;
 
-        // TODO: Testing
+        // TODO: Testing minimum background conductance
         hppPedersonConductance[i] = std::max(hppPedersonConductance[i], 0.25);
         hppHallConductance[i] = std::max(hppHallConductance[i], 0.25);
 

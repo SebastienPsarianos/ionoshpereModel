@@ -1,24 +1,30 @@
+#include "ionosphere/IonosphereTypes.hpp"
 #include "ionosphere/solver/Solver.hpp"
-#include "ionosphere/utils/Grid.hpp"
 
 class TlSolver : Solver {
   public:
-    TlSolver(size_t nTh, size_t nPh, double dPh, double dTh, MapRcp map);
+    TlSolver(size_t nTh, size_t nPh, double dPh, double dTh,
+             Ionosphere::MapRCP map);
 
     // TODO: Fix solver
-    VectorRcp calculatePotential(MultiVectorRcp conductance,
-                                 MultiVectorRcp coords, VectorRcp sourceTerm);
+    Ionosphere::VectorRCP
+    calculatePotential(Ionosphere::MultiVectorRCP conductance,
+                       Ionosphere::MultiVectorRCP coords,
+                       Ionosphere::VectorRCP sourceTerm);
 
   private:
-    MultiVectorRcp _calculateCoefficients(MultiVectorRcp conductance,
-                                          MultiVectorRcp coords);
+    Ionosphere::MultiVectorRCP
+    _calculateCoefficients(Ionosphere::MultiVectorRCP conductance,
+                           Ionosphere::MultiVectorRCP coords);
 
-    VectorRcp _buildSourceVector(MultiVectorRcp sourceTerm);
+    Ionosphere::VectorRCP
+    _buildSourceVector(Ionosphere::MultiVectorRCP sourceTerm);
 
-    CrsMatrixRcp _buildGrid(MultiVectorRcp coords, MultiVectorRcp coefficients);
+    Ionosphere::MatrixRCP _buildGrid(Ionosphere::MultiVectorRCP coords,
+                                     Ionosphere::MultiVectorRCP coefficients);
 
     double _dTh;
     double _dPh;
 
-    MapRcp _map;
+    Ionosphere::MapRCP _map;
 };

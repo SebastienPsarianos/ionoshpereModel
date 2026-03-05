@@ -1,19 +1,16 @@
-#include "Tpetra_Vector_decl.hpp"
+#include "ionosphere/IonosphereTypes.hpp"
 #include "ionosphere/conductance/EmpConductance.hpp"
 #include "ionosphere/postProcessing/EField.hpp"
 #include "ionosphere/solver/TlSolver.hpp"
 #include "ionosphere/tecplot.hpp"
 #include "ionosphere/utils/Coordinates.hpp"
-#include "ionosphere/utils/Grid.hpp"
 #include "ionosphere/utils/LegacyMHDConversion.hpp"
-#include <BelosSolverFactory.hpp>
-#include <BelosTpetraAdapter.hpp>
 #include <Tpetra_Core.hpp>
 #include <iostream>
 #include <stdexcept>
 
-double SIG0 = 1000;
-double THETA0 = 0.05;
+Ionosphere::Scalar SIG0 = 1000;
+Ionosphere::Scalar THETA0 = 0.05;
 
 int YEAR = 2026;
 int MONTH = 2;
@@ -24,9 +21,13 @@ int KP = 6;
 int F107 = 120;
 
 int main(int argc, char* argv[]) {
-    Tpetra::ScopeGuard tpetraScope(&argc, &argv);
-    Teuchos::RCP<const Teuchos::Comm<int>> comm = Tpetra::getDefaultComm();
+    using namespace Ionosphere;
+    using Teuchos::rcp;
 
+    Tpetra::ScopeGuard tpetraScope(&argc, &argv);
+    auto comm = Tpetra::getDefaultComm();
+
+    /*** BEGIN PARAMETER PARSING ***/
     if (argc < 2) {
         std::cerr << "Usage: " << argv[0] << " [-t|-m] <input_file>"
                   << std::endl;
@@ -54,6 +55,7 @@ int main(int argc, char* argv[]) {
                   << std::endl;
         return -1;
     }
+    /*** END PARAMETER PARSING ***/
 
     int nTh = -1;
     int nPh = -1;
@@ -66,38 +68,38 @@ int main(int argc, char* argv[]) {
             "Error reading source term data, ending execution");
     }
 
-    auto map =
-        Teuchos::rcp(new Tpetra::Map<int, long long>(nTh * nPh, 0, comm));
+    auto map = rcp(new Map(nTh * nPh, 0, comm));
+    auto coordinates = rcp(new MultiVector(map, 2));
+    auto conductance = rcp(new MultiVector(map, 3));
+    auto sourceTerm = rcp(new Vector(map));
 
-    auto coords2 =
-        Teuchos::rcp(new Tpetra::MultiVector<double, int, long long>(map, 2));
-    auto conductance2 =
-        Teuchos::rcp(new Tpetra::MultiVector<double, int, long long>(map, 3));
-    auto sourceTerm =
-        Teuchos::rcp(new Tpetra::Vector<double, int, long long>(map));
-    auto potential2 =
-        Teuchos::rcp(new Tpetra::Vector<double, int, long long>(map));
-
+    /*** BEGIN MHD INTERPOLATION ***/
     LegacyMHDConversion::processLegacyOutput(
-        inputFile, dTh, dPh, coords2, sourceTerm, comm, nTh, nPh, THETA0);
+        inputFile, dTh, dPh, coordinates, sourceTerm, comm, nTh, nPh, THETA0);
+    /*** END MHD INTERPOLATION ***/
 
-    EmpConductance(conductance2, coords2, nTh, nPh, SIG0, YEAR, DAY, MONTH,
-                   HOUR, map)
+    /*** BEGIN CONDUCTANCE SOLVE ***/
+    EmpConductance(conductance, coordinates, map, SIG0, nTh, nPh, YEAR, DAY,
+                   MONTH, HOUR)
         .computeConductance(KP, F107);
+    /*** END CONDUCTANCE SOLVE ***/
 
-    // INPR
+    /*** BEGIN POTENTIAL SOLVE ***/
     TlSolver test = TlSolver(nTh, nPh, dTh, dPh, map);
-    VectorRcp result =
-        test.calculatePotential(conductance2, coords2, sourceTerm);
+    VectorRCP result =
+        test.calculatePotential(conductance, coordinates, sourceTerm);
+    /*** END POTENTIAL SOLVE ***/
 
+    /*** BEGIN PLOTTING ***/
     if (useTecplot) {
-        exportToTecplot("../data/test3.dat", coords2, result, sourceTerm, comm,
-                        nTh, nPh);
+        exportToTecplot("../data/test3.dat", coordinates, result, sourceTerm,
+                        comm, nTh, nPh);
     } else {
-        exportToMatplotlib("../data/solvedPotential.txt", coords2, result,
+        exportToMatplotlib("../data/solvedPotential.txt", coordinates, result,
                            sourceTerm, comm, nTh, nPh);
     }
     return 0;
+    /*** END PLOTTING ***/
 
     // TODO: Proper post-processing, including J and others
 }
