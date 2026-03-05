@@ -23,10 +23,12 @@ else
     exit 1
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 if [[ "$(uname)" == "Darwin" ]]; then
-    SPACK_ENV_DIR="."
+    SPACK_ENV_DIR="$SCRIPT_DIR/OSX"
 else
-    SPACK_ENV_DIR="spack-linux"
+    SPACK_ENV_DIR="$SCRIPT_DIR/linux"
 fi
 
 spack env activate "$SPACK_ENV_DIR"
@@ -38,7 +40,8 @@ if [ "$BUILD_SPACK" = true ]; then
 fi
 
 VIEW_PATH="$SPACK_ENV/.spack-env/view"
-cd build
+mkdir -p "$SCRIPT_DIR/build"
+cd "$SCRIPT_DIR/build"
 cmake .. \
     -DCMAKE_CXX_COMPILER=mpicxx \
     -DCMAKE_PREFIX_PATH="$VIEW_PATH" \

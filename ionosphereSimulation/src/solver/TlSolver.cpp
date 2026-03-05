@@ -1,14 +1,13 @@
 #include "ionosphere/solver/TlSolver.hpp"
-
-#include "BelosBlockGmresSolMgr.hpp"
-#include "Ifpack2_Factory.hpp"
-#include "Teuchos_DataAccess.hpp"
-#include "Tpetra_CrsMatrix_decl.hpp"
-#include "Tpetra_Operator.hpp"
 #include "ionosphere/Constants.hpp"
-#include "ionosphere/utils/Grid.hpp"
+#include "ionosphere/IonosphereTypes.hpp"
+
+#include <BelosBlockGmresSolMgr.hpp>
 #include <BelosLinearProblem.hpp>
 #include <BelosTpetraAdapter.hpp>
+#include <Ifpack2_Factory.hpp>
+#include <Teuchos_DataAccess.hpp>
+#include <Tpetra_Operator.hpp>
 #include <cmath>
 #include <stdexcept>
 
@@ -118,22 +117,14 @@ MatrixRCP TlSolver::_buildGrid(MultiVectorRCP coords,
         vals.push_back(-2 * ththCoefficients[i] / (_dTh * _dTh) -
                        2 * phphCoefficients[i] / (_dPh * _dPh));
 
-        // TODO: Figure out if this is needed
-        long long pinPoint = _nTh / 2; // equator, phi=0
-        if (gridPoint == pinPoint) {
-            Teuchos::Array<long long> matrixIdcs;
-            Teuchos::Array<double> vals;
-            matrixIdcs.push_back(gridPoint);
-            vals.push_back(1.0);
-            A->insertGlobalValues(gridPoint, matrixIdcs, vals);
-            continue; // skip normal stencil for this point
-        }
-
         size_t left = gridPoint - _nTh;
         size_t right = gridPoint + _nTh;
         size_t up = gridPoint - 1;
         size_t down = gridPoint + 1;
 
+        // TODO: Add a gauge condition
+
+        // TODO: Replace with polar cap stencil
         if (theta == 0) {
             size_t oppositePhi = (phi + _nPh / 2) % _nPh;
             up = oppositePhi * _nTh + 1;

@@ -1,0 +1,18 @@
+spack:
+  specs:
+  - trilinos@16.0.0 ~fortran +mpi +shared +tpetra %gcc
+
+  packages:
+    mpi:
+      require:
+      - openmpi +fortran
+    blas:
+      require:
+      - netlib-lapack
+    lapack:
+      require:
+      - netlib-lapack
+
+  view: true
+  concretizer:
+    unify: true
