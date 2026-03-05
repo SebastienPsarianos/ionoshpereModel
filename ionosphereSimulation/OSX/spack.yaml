@@ -1,0 +1,22 @@
+spack:
+  specs:
+  - trilinos@16.0.0 ~fortran +mpi +shared +tpetra %apple-clang@17.0.0
+
+  packages:
+    mpi:
+      require:
+      - openmpi +fortran
+    blas:
+      require:
+      - netlib-lapack
+    lapack:
+      require:
+      - netlib-lapack
+    nvpl-blas:
+      buildable: false
+    nvpl-lapack:
+      buildable: false
+
+  view: true
+  concretizer:
+    unify: true
