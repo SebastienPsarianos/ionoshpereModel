@@ -8,10 +8,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-# IMPORTANT: Do NOT set CMAKE_CXX_COMPILER here. 
-# Your build.sh script passes 'mpicxx' via the command line, which is the correct way.
-
-# --- dependencies ---
 
 # 1. Eigen
 add_library(eigen_lib INTERFACE)
@@ -26,17 +22,10 @@ target_include_directories(json_lib INTERFACE
 )
 
 # 3. Trilinos
-# This looks for TrilinosConfig.cmake in the path provided by your build script
 find_package(Trilinos REQUIRED)
 
-# Optional: Print what we found to the terminal for debugging
-message(STATUS "Trilinos Found: ${Trilinos_DIR}")
-message(STATUS "Trilinos Libraries: ${Trilinos_LIBRARIES}")
-
-# --- Main Executable ---
+# 4. Build Exec
 add_executable(${PROJECT_NAME})
-
-# Attach sources directly to the target
 target_sources(${PROJECT_NAME} PRIVATE
     src/main.cpp
     src/utils/Grid.cpp
@@ -44,24 +33,24 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/utils/LegacyMHDConversion.cpp
     src/conductance/EmpConductance.cpp
     src/conductance/utils.cpp
+    src/conductance/SolarModel.cpp
+    src/conductance/DipoleModel.cpp
     src/solver/GsSolver.cpp
     src/solver/TlSolver.cpp
     src/postProcessing/EField.cpp
 )
 
-# --- Includes ---
 target_include_directories(${PROJECT_NAME} PRIVATE 
     "${CMAKE_SOURCE_DIR}/include"
-    ${Trilinos_INCLUDE_DIRS}      # Trilinos headers
-    ${Trilinos_TPL_INCLUDE_DIRS}  # Third-party headers (MPI, BLAS, LAPACK)
+    ${Trilinos_INCLUDE_DIRS}
+    ${Trilinos_TPL_INCLUDE_DIRS}
 )
 
-# --- Linking ---
 target_link_libraries(${PROJECT_NAME} PRIVATE 
     eigen_lib
     json_lib
-    ${Trilinos_LIBRARIES}      # The main Trilinos libs
-    ${Trilinos_TPL_LIBRARIES}  # The underlying libs (MPI, BLAS, etc.)
+    ${Trilinos_LIBRARIES}
+    ${Trilinos_TPL_LIBRARIES}
 )
 
 separate_arguments(TRILINOS_FLAGS_LIST NATIVE_COMMAND "${Trilinos_CXX_COMPILER_FLAGS}")

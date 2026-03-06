@@ -1,15 +1,16 @@
 #include "Teuchos_RCPDecl.hpp"
-#include "Tpetra_Vector_decl.hpp"
+#include "ionosphere/IonosphereTypes.hpp"
+#include "ionosphere/utils/Coordinates.hpp"
+
 #include <string>
 
 class LegacyMHDConversion {
   public:
-    static void processLegacyOutput(
-        std::string filename, double& dTh, double& dPh,
-        Teuchos::RCP<Tpetra::MultiVector<double, int, long long>> coords,
-        Teuchos::RCP<Tpetra::Vector<double, int, long long>> sourceTerm,
-        Teuchos::RCP<const Teuchos::Comm<int>> comm, int nTh, int nPh,
-        double THETA0);
+    static void processLegacyOutput(Teuchos::RCP<Coordinates>& coordinates,
+                                    Ionosphere::VectorRCP& sourceTerm,
+                                    Ionosphere::MapRCP map,
+                                    Ionosphere::CommRCP comm, int nTh, int nPh,
+                                    const std::string& filename);
     static void getGridSize(std::string filename, int* nTh, int* nPh,
-                            Teuchos::RCP<const Teuchos::Comm<int>> comm);
+                            Ionosphere::CommRCP comm);
 };

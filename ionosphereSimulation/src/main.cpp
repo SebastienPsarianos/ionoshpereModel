@@ -23,6 +23,7 @@ int F107 = 120;
 int main(int argc, char* argv[]) {
     using namespace Ionosphere;
     using Teuchos::rcp;
+    using Teuchos::RCP;
 
     Tpetra::ScopeGuard tpetraScope(&argc, &argv);
     auto comm = Tpetra::getDefaultComm();
@@ -59,8 +60,6 @@ int main(int argc, char* argv[]) {
 
     int nTh = -1;
     int nPh = -1;
-    double dTh = -1;
-    double dPh = -1;
 
     LegacyMHDConversion::getGridSize(inputFile, &nTh, &nPh, comm);
     if (nTh <= 0 || nPh <= 0) {
@@ -69,34 +68,32 @@ int main(int argc, char* argv[]) {
     }
 
     auto map = rcp(new Map(nTh * nPh, 0, comm));
-    auto coordinates = rcp(new MultiVector(map, 2));
-    auto conductance = rcp(new MultiVector(map, 3));
     auto sourceTerm = rcp(new Vector(map));
+    RCP<Coordinates> coords;
 
     /*** BEGIN MHD INTERPOLATION ***/
-    LegacyMHDConversion::processLegacyOutput(
-        inputFile, dTh, dPh, coordinates, sourceTerm, comm, nTh, nPh, THETA0);
+    LegacyMHDConversion::processLegacyOutput(coords, sourceTerm, map, comm, nTh,
+                                             nPh, inputFile);
     /*** END MHD INTERPOLATION ***/
 
     /*** BEGIN CONDUCTANCE SOLVE ***/
-    EmpConductance(conductance, coordinates, map, SIG0, nTh, nPh, YEAR, DAY,
-                   MONTH, HOUR)
-        .computeConductance(KP, F107);
+    MultiVectorRCP conductance =
+        EmpConductance(coords, map, SIG0, YEAR, DAY, MONTH, HOUR)
+            .computeConductance(KP, F107);
     /*** END CONDUCTANCE SOLVE ***/
 
     /*** BEGIN POTENTIAL SOLVE ***/
-    TlSolver test = TlSolver(nTh, nPh, dTh, dPh, map);
-    VectorRCP result =
-        test.calculatePotential(conductance, coordinates, sourceTerm);
+    TlSolver solver(coords, map);
+    VectorRCP result = solver.calculatePotential(conductance, sourceTerm);
     /*** END POTENTIAL SOLVE ***/
 
     /*** BEGIN PLOTTING ***/
     if (useTecplot) {
-        exportToTecplot("../data/test3.dat", coordinates, result, sourceTerm,
-                        comm, nTh, nPh);
+        exportToTecplot("../data/test3.dat", coords->multiVector(), result,
+                        sourceTerm, comm, coords->nTh, coords->nPh);
     } else {
-        exportToMatplotlib("../data/solvedPotential.txt", coordinates, result,
-                           sourceTerm, comm, nTh, nPh);
+        exportToMatplotlib("../data/solvedPotential.txt", coords->multiVector(),
+                           result, sourceTerm, comm, coords->nTh, coords->nPh);
     }
     return 0;
     /*** END PLOTTING ***/

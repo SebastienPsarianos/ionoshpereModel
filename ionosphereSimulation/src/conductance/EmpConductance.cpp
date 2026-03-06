@@ -1,39 +1,34 @@
 #include "ionosphere/conductance/EmpConductance.hpp"
-#include "Tpetra_MultiVector_decl.hpp"
 #include "ionosphere/conductance/utils.hpp"
-#include "ionosphere/utils/Grid.hpp"
 
 #include <cmath>
 #include <fstream>
 #include <nlohmann/json>
 #include <string>
 
-EmpConductance::EmpConductance(Ionosphere::MultiVectorRCP sigma,
-                               Ionosphere::MultiVectorRCP coords,
-                               Ionosphere::MapRCP map, Ionosphere::Scalar sig0,
-                               size_t nTh, size_t nPh, int year, int day,
-                               int month, int hour)
-    : _map(map), _sigma(sigma), _coords(coords),
-      _euvConductance(new Ionosphere::MultiVector(map, 3)),
+using namespace Ionosphere;
+using nlohmann::json;
+
+EmpConductance::EmpConductance(Teuchos::RCP<Coordinates> coords, MapRCP map,
+                               Scalar sig0, int year, int day, int month,
+                               int hour)
+    : _map(map), _euvConductance(new Ionosphere::MultiVector(map, 3)),
       _auroralConductance(new Ionosphere::MultiVector(map, 3)),
-      _nTh(nTh), _nPh(nPh), _sig0(sig0) {
+      _conductance(new Ionosphere::MultiVector(map, 3)), _sig0(sig0),
+      _dipoleModel(), _solarModel(year, month, day, hour), _coords(coords) {
 
     _readAndSyncJson(map->getComm());
-    computeDipoleRotationMatrix(_rotationMatrix);
-    computeGrenaTimescales(_utTime, _ttTime, year, month, day, hour);
 }
 
-void EmpConductance::computeConductance(int kp, double f107) {
-
-    // TODO: Set kp and f107 value dynamically
+MultiVectorRCP EmpConductance::computeConductance(int kp, double f107) {
     _computeAuroralConductance(kp);
     _computeEuvConductance(f107);
     _computeHppConductance();
+
+    return _conductance;
 }
 
-void EmpConductance::_readAndSyncJson(
-    Teuchos::RCP<const Teuchos::Comm<int>> comm) {
-    using nlohmann::json;
+void EmpConductance::_readAndSyncJson(CommRCP comm) {
 
     const int myRank = comm->getRank();
     const int rootRank = 0;
@@ -91,12 +86,9 @@ void EmpConductance::_computeEuvConductance(double f107) {
     using std::cos, std::sin, std::sqrt;
     auto pedersonConductances = _euvConductance->getDataNonConst(0);
     auto hallConductances = _euvConductance->getDataNonConst(1);
-    auto thVals = _coords->getDataNonConst(0);
-    auto phVals = _coords->getDataNonConst(1);
 
-    for (int i = 0; i < thVals.size(); i++) {
-        GeoSph currCoord = {.theta = thVals[i], .phi = phVals[i]};
-        double sza = computeSolarZenith(_utTime, _ttTime, convert(currCoord));
+    for (size_t i = 0; i < _coords->size(); i++) {
+        double sza = _solarModel.computeZenith(_coords->geoGeo(i));
 
         if (sza >= M_PI / 2) {
             pedersonConductances[i] = 0;
@@ -110,9 +102,8 @@ void EmpConductance::_computeEuvConductance(double f107) {
     }
 }
 
-// TODO: Figure out how to input the values equatorward of the max etc...
 void EmpConductance::_computeAuroralConductance(int kp) {
-    using nlohmann::json;
+
     if (kp > 6 || kp < 0)
         throw std::runtime_error("Invalid kp value supplied for auroral "
                                  "conductance, should be [0,6]");
@@ -122,25 +113,19 @@ void EmpConductance::_computeAuroralConductance(int kp) {
 
     auto pedersonConductances = _auroralConductance->getDataNonConst(0);
     auto hallConductances = _auroralConductance->getDataNonConst(1);
-    auto thVals = _coords->getDataNonConst(0);
-    auto phVals = _coords->getDataNonConst(1);
 
-    for (int i = 0; i < thVals.size(); i++) {
-        GeoSph currCoord = {.theta = thVals[i], .phi = phVals[i]};
+    // Compute subsolar position once (doesn't depend on grid point)
+    GeoGeo subsolarGeo = _solarModel.computeSubSolar();
+    MagSph subsolarMag =
+        _dipoleModel.geoCentricToDipole(Coordinates::toGeoSph(subsolarGeo));
+    MagGeo subsolarMagGeo = Coordinates::toMagGeo(subsolarMag);
 
-        MagSph observerPositionMag;
-        geoCentricToDipole(observerPositionMag, currCoord, _rotationMatrix);
+    for (size_t i = 0; i < _coords->size(); i++) {
+        MagSph obsMag = _dipoleModel.geoCentricToDipole(_coords->geoSph(i));
+        MagGeo observerMagGeo = Coordinates::toMagGeo(obsMag);
 
-        GeoGeo subsolarPosition;
-        computeSubSolar(subsolarPosition, _utTime, _ttTime);
-        MagSph subsolarPositionMag;
-        geoCentricToDipole(subsolarPositionMag, convert(subsolarPosition),
-                           _rotationMatrix);
-
-        double mlt = computeMagneticLocalTime(convert(subsolarPositionMag),
-                                              convert(observerPositionMag));
-
-        double mlat = convert(observerPositionMag).latitude;
+        double mlt = _dipoleModel.computeMLT(subsolarMagGeo, observerMagGeo);
+        double mlat = observerMagGeo.latitude;
 
         // TODO: Testing clamping outside of 50
         double mlatDeg = mlat * 180.0 / M_PI;
@@ -183,14 +168,12 @@ void EmpConductance::_computeHppConductance() {
     auto hallConductancesAur = _auroralConductance->getDataNonConst(1);
     auto pedersonConductancesEuv = _euvConductance->getDataNonConst(0);
     auto hallConductancesEuv = _euvConductance->getDataNonConst(1);
-    auto thVals = _coords->getDataNonConst(0);
-    auto phVals = _coords->getDataNonConst(1);
 
-    auto hppPedersonConductance = _sigma->getDataNonConst(0);
-    auto hppHallConductance = _sigma->getDataNonConst(1);
-    auto hppParallelConductance = _sigma->getDataNonConst(2);
+    auto hppPedersonConductance = _conductance->getDataNonConst(0);
+    auto hppHallConductance = _conductance->getDataNonConst(1);
+    auto hppParallelConductance = _conductance->getDataNonConst(2);
 
-    for (int i = 0; i < thVals.size(); i++) {
+    for (size_t i = 0; i < _coords->size(); i++) {
         hppHallConductance[i] =
             sqrt(hallConductancesAur[i] * hallConductancesAur[i] +
                  hallConductancesEuv[i] * hallConductancesEuv[i]);

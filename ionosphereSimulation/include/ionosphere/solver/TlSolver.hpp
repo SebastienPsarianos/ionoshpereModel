@@ -1,15 +1,13 @@
 #include "ionosphere/IonosphereTypes.hpp"
 #include "ionosphere/solver/Solver.hpp"
+#include "ionosphere/utils/Coordinates.hpp"
 
 class TlSolver : Solver {
   public:
-    TlSolver(size_t nTh, size_t nPh, double dPh, double dTh,
-             Ionosphere::MapRCP map);
+    TlSolver(Teuchos::RCP<Coordinates> coords, Ionosphere::MapRCP map);
 
-    // TODO: Fix solver
     Ionosphere::VectorRCP
     calculatePotential(Ionosphere::MultiVectorRCP conductance,
-                       Ionosphere::MultiVectorRCP coords,
                        Ionosphere::VectorRCP sourceTerm);
 
   private:
@@ -26,5 +24,6 @@ class TlSolver : Solver {
     double _dTh;
     double _dPh;
 
+    Teuchos::RCP<Coordinates> _coords;
     Ionosphere::MapRCP _map;
 };
