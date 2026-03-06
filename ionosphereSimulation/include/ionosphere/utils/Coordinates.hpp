@@ -4,22 +4,23 @@
 
 class Coordinates {
   public:
-    Coordinates(Ionosphere::MultiVectorRCP coords, size_t nTh, size_t nPh,
-                double dTh, double dPh);
+    Coordinates(Ionosphere::MultiVectorRCP coords, Ionosphere::GlobalOrd nTh,
+                Ionosphere::GlobalOrd nPh, Ionosphere::Scalar dTh,
+                Ionosphere::Scalar dPh);
 
-    GeoSph geoSph(size_t i) const;
-    GeoGeo geoGeo(size_t i) const;
-    size_t size() const;
+    GeoSph geoSph(Ionosphere::LocalOrd i) const;
+    GeoGeo geoGeo(Ionosphere::LocalOrd i) const;
+
     Ionosphere::MultiVectorRCP multiVector() const;
 
     static GeoGeo toGeoGeo(const GeoSph& sph);
     static GeoSph toGeoSph(const GeoGeo& geo);
     static MagGeo toMagGeo(const MagSph& sph);
 
-    const size_t nTh;
-    const size_t nPh;
-    const double dTh;
-    const double dPh;
+    const Ionosphere::GlobalOrd nTh;
+    const Ionosphere::GlobalOrd nPh;
+    const Ionosphere::Scalar dTh;
+    const Ionosphere::Scalar dPh;
 
   private:
     Ionosphere::MultiVectorRCP _coords;
