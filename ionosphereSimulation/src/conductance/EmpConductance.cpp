@@ -87,7 +87,7 @@ void EmpConductance::_computeEuvConductance(double f107) {
     auto pedersonConductances = _euvConductance->getDataNonConst(0);
     auto hallConductances = _euvConductance->getDataNonConst(1);
 
-    for (size_t i = 0; i < _coords->size(); i++) {
+    for (size_t i = 0; i < _coords->multiVector()->getLocalLength(); i++) {
         double sza = _solarModel.computeZenith(_coords->geoGeo(i));
 
         if (sza >= M_PI / 2) {
@@ -120,7 +120,7 @@ void EmpConductance::_computeAuroralConductance(int kp) {
         _dipoleModel.geoCentricToDipole(Coordinates::toGeoSph(subsolarGeo));
     MagGeo subsolarMagGeo = Coordinates::toMagGeo(subsolarMag);
 
-    for (size_t i = 0; i < _coords->size(); i++) {
+    for (size_t i = 0; i < _coords->multiVector()->getLocalLength(); i++) {
         MagSph obsMag = _dipoleModel.geoCentricToDipole(_coords->geoSph(i));
         MagGeo observerMagGeo = Coordinates::toMagGeo(obsMag);
 
@@ -173,7 +173,7 @@ void EmpConductance::_computeHppConductance() {
     auto hppHallConductance = _conductance->getDataNonConst(1);
     auto hppParallelConductance = _conductance->getDataNonConst(2);
 
-    for (size_t i = 0; i < _coords->size(); i++) {
+    for (size_t i = 0; i < _coords->multiVector()->getLocalLength(); i++) {
         hppHallConductance[i] =
             sqrt(hallConductancesAur[i] * hallConductancesAur[i] +
                  hallConductancesEuv[i] * hallConductancesEuv[i]);

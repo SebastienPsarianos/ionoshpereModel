@@ -83,8 +83,8 @@ int main(int argc, char* argv[]) {
     /*** END CONDUCTANCE SOLVE ***/
 
     /*** BEGIN POTENTIAL SOLVE ***/
-    TlSolver solver(coords, map);
-    VectorRCP result = solver.calculatePotential(conductance, sourceTerm);
+    TlSolver solver(coords, conductance, sourceTerm, map);
+    VectorRCP result = solver.calculatePotential();
     /*** END POTENTIAL SOLVE ***/
 
     /*** BEGIN PLOTTING ***/
