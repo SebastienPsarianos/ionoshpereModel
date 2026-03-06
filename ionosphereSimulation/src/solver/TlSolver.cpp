@@ -14,20 +14,21 @@
 using namespace Ionosphere;
 
 // TODO: Figure out if this needs to be a class
-TlSolver::TlSolver(size_t nTh, size_t nPh, double dPh, double dTh, MapRCP map)
-    : Solver(nTh, nPh), _dTh(dTh), _dPh(dPh), _map(map) {}
+TlSolver::TlSolver(Teuchos::RCP<Coordinates> coords, MapRCP map)
+    : Solver(coords->nTh, coords->nPh), _dTh(coords->dTh), _dPh(coords->dPh),
+      _coords(coords), _map(map) {}
 
 VectorRCP TlSolver::calculatePotential(MultiVectorRCP conductance,
-                                       MultiVectorRCP coords,
                                        VectorRCP sourceTerm) {
 
-    MultiVectorRCP coefficients = _calculateCoefficients(conductance, coords);
-    MatrixRCP A = _buildGrid(coords, coefficients);
+    MultiVectorRCP coordsMv = _coords->multiVector();
+    MultiVectorRCP coefficients = _calculateCoefficients(conductance, coordsMv);
+    MatrixRCP A = _buildGrid(coordsMv, coefficients);
 
-    using prec_type = Ifpack2::Preconditioner<double, int, long long>;
+    using precType = Ifpack2::Preconditioner<double, int, long long>;
 
     Ifpack2::Factory factory;
-    Teuchos::RCP<prec_type> prec =
+    Teuchos::RCP<precType> prec =
         factory.create<Tpetra::CrsMatrix<double, int, long long>>("ILUT", A);
 
     // TODO: Figure out the preconditioner parameters
@@ -93,6 +94,8 @@ VectorRCP TlSolver::calculatePotential(MultiVectorRCP conductance,
 MatrixRCP TlSolver::_buildGrid(MultiVectorRCP coords,
                                MultiVectorRCP coefficients) {
 
+    using std::sin;
+
     auto ththCoefficients = coefficients->getDataNonConst(0);
     auto phphCoefficients = coefficients->getDataNonConst(1);
     auto thCoefficients = coefficients->getDataNonConst(2);
@@ -113,53 +116,61 @@ MatrixRCP TlSolver::_buildGrid(MultiVectorRCP coords,
         Teuchos::Array<long long> matrixIdcs;
         Teuchos::Array<double> vals;
 
-        matrixIdcs.push_back(gridPoint);
-        vals.push_back(-2 * ththCoefficients[i] / (_dTh * _dTh) -
-                       2 * phphCoefficients[i] / (_dPh * _dPh));
+        // TODO: Add a gauge condition at nTh / 2 (equator)
 
-        size_t left = gridPoint - _nTh;
-        size_t right = gridPoint + _nTh;
-        size_t up = gridPoint - 1;
-        size_t down = gridPoint + 1;
-
-        // TODO: Add a gauge condition
-
-        // TODO: Replace with polar cap stencil
+        // INPR: Replace with polar cap stencil
+        // Applying the polar cap flux boundary condition
         if (theta == 0) {
-            size_t oppositePhi = (phi + _nPh / 2) % _nPh;
-            up = oppositePhi * _nTh + 1;
+            if (phi == 0) {
+                // Our actual pole point
+                matrixIdcs.push_back(gridPoint);
+                vals.push_back(-sin(coords->dTh));
+            } else {
+                // Just constrain to phi == 0
+                matrixIdcs.push_back(0);
+                vals.push_back(1);
+            }
+
         } else if (theta == _nTh - 1) {
-            size_t oppositePhi = (phi + _nPh / 2) % _nPh;
-            down = oppositePhi * _nTh + theta - 1;
+        } else {
+            matrixIdcs.push_back(gridPoint);
+            vals.push_back(-2 * ththCoefficients[i] / (_dTh * _dTh) -
+                           2 * phphCoefficients[i] / (_dPh * _dPh));
+
+            size_t left = gridPoint - _nTh;
+            size_t right = gridPoint + _nTh;
+
+            size_t up = gridPoint - 1;
+            size_t down = gridPoint + 1;
+
+            if (phi == 0) {
+                left = theta + (_nPh - 1) * _nTh;
+            } else if (phi == _nPh - 1) {
+                right = theta;
+            }
+
+            // Up
+            matrixIdcs.push_back(up);
+            vals.push_back(ththCoefficients[i] / (_dTh * _dTh) -
+                           thCoefficients[i] / (2 * _dTh));
+
+            // Down
+            matrixIdcs.push_back(down);
+            vals.push_back(ththCoefficients[i] / (_dTh * _dTh) +
+                           thCoefficients[i] / (2 * _dTh));
+
+            // Left
+            matrixIdcs.push_back(left);
+            vals.push_back(phphCoefficients[i] / (_dPh * _dPh) -
+                           phCoefficients[i] / (2 * _dPh));
+
+            // Right
+            matrixIdcs.push_back(right);
+            vals.push_back(phphCoefficients[i] / (_dPh * _dPh) +
+                           phCoefficients[i] / (2 * _dPh));
+
+            A->insertGlobalValues(gridPoint, matrixIdcs, vals);
         }
-
-        if (phi == 0) {
-            left = theta + (_nPh - 1) * _nTh;
-        } else if (phi == _nPh - 1) {
-            right = theta;
-        }
-
-        // Up
-        matrixIdcs.push_back(up);
-        vals.push_back(ththCoefficients[i] / (_dTh * _dTh) -
-                       thCoefficients[i] / (2 * _dTh));
-
-        // Down
-        matrixIdcs.push_back(down);
-        vals.push_back(ththCoefficients[i] / (_dTh * _dTh) +
-                       thCoefficients[i] / (2 * _dTh));
-
-        // Left
-        matrixIdcs.push_back(left);
-        vals.push_back(phphCoefficients[i] / (_dPh * _dPh) -
-                       phCoefficients[i] / (2 * _dPh));
-
-        // Right
-        matrixIdcs.push_back(right);
-        vals.push_back(phphCoefficients[i] / (_dPh * _dPh) +
-                       phCoefficients[i] / (2 * _dPh));
-
-        A->insertGlobalValues(gridPoint, matrixIdcs, vals);
     }
     A->fillComplete();
 

@@ -1,21 +1,25 @@
 #include "ionosphere/utils/LegacyMHDConversion.hpp"
-#include "Kokkos_TeuchosCommAdapters.hpp"
 #include "Teuchos_Comm.hpp"
+#include "ionosphere/IonosphereTypes.hpp"
+#include "ionosphere/utils/Coordinates.hpp"
 #include <Tpetra_Core.hpp>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
 
-void LegacyMHDConversion::processLegacyOutput(
-    std::string filename, double& dTh, double& dPh,
-    Teuchos::RCP<Tpetra::MultiVector<double, int, long long>> coords,
-    Teuchos::RCP<Tpetra::Vector<double, int, long long>> sourceTerm,
-    Teuchos::RCP<const Teuchos::Comm<int>> comm, int nTh, int nPh,
-    double THETA0) {
+using namespace Ionosphere;
+using Teuchos::rcp;
+using Teuchos::RCP;
 
+void LegacyMHDConversion::processLegacyOutput(RCP<Coordinates>& coordinates,
+                                              VectorRCP& sourceTerm, MapRCP map,
+                                              CommRCP comm, int nTh, int nPh,
+                                              const std::string& filename) {
     // Create root map so we only hit the file once
     auto rootMap = Teuchos::rcp(new Tpetra::Map<int, long long>(
         nTh * nPh, (comm->getRank() == 0 ? nTh * nPh : 0), 0, comm));
+
+    // Build the vectors for the root ran
     auto rootCoords = Teuchos::rcp(
         new Tpetra::MultiVector<double, int, long long>(rootMap, 2));
     auto rootSourceTerm =
@@ -24,6 +28,9 @@ void LegacyMHDConversion::processLegacyOutput(
     auto thVals = rootCoords->getDataNonConst(0);
     auto phVals = rootCoords->getDataNonConst(1);
     auto sourceVals = rootSourceTerm->getDataNonConst();
+
+    double dTh = 0.0;
+    double dPh = 0.0;
 
     if (comm->getRank() == 0) {
         std::fstream jrData = std::fstream(filename);
@@ -36,45 +43,38 @@ void LegacyMHDConversion::processLegacyOutput(
 
         for (int th = 0; th < nTh; th++) {
             for (int ph = 0; ph < nPh; ph++) {
-                // if (ph == nPh) {
-                //     double discard;
-                //     jrData >> discard >> discard >> discard;
-                //     // We don't store the last redundant ph value
-                //     continue;
-                // }
-
                 long long globalId = ph * nTh + th;
                 jrData >> thVals[globalId] >> phVals[globalId] >>
                     sourceVals[globalId];
 
                 if (!jrData) {
                     throw std::runtime_error(
-                        "File structure corrupted for JR input data");
+                        "File structure incorrect for JR input data");
                 }
 
                 if (th == 0) {
-                    thVals[globalId] = thVals[globalId] + THETA0;
+                    thVals[globalId] = thVals[globalId];
                 } else if (th == nTh - 1) {
-                    thVals[globalId] = thVals[globalId] - THETA0;
+                    thVals[globalId] = thVals[globalId];
                 }
             }
         }
-        dTh = thVals[1] - (thVals[0] - THETA0);
+        dTh = thVals[1] - thVals[0];
         dPh = phVals[nTh] - phVals[0];
     }
 
-    auto distMap = coords->getMap();
-    Tpetra::Export<int, long long> exporter(rootMap, distMap);
+    auto coordVector = rcp(new Ionosphere::MultiVector(map, 2));
+    sourceTerm = rcp(new Ionosphere::Vector(map));
+    Tpetra::Export<int, long long> exporter(rootMap, map);
 
-    // Export the new Vectors
-    coords->doExport(*rootCoords, exporter, Tpetra::INSERT);
+    coordVector->doExport(*rootCoords, exporter, Tpetra::INSERT);
     sourceTerm->doExport(*rootSourceTerm, exporter, Tpetra::INSERT);
 
-    // Broadcast dTh, dPh values
-    comm->broadcast(0, sizeof(double), (char*)&dPh);
     comm->broadcast(0, sizeof(double), (char*)&dTh);
-}
+    comm->broadcast(0, sizeof(double), (char*)&dPh);
 
+    coordinates = rcp(new Coordinates(coordVector, nTh, nPh, dTh, dPh));
+}
 void LegacyMHDConversion::getGridSize(
     std::string filename, int* nTh, int* nPh,
     Teuchos::RCP<const Teuchos::Comm<int>> comm) {

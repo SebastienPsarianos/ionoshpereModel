@@ -12,3 +12,4 @@ template class Tpetra::MultiVector<Ionosphere::Scalar, Ionosphere::LocalOrd,
                                    Ionosphere::GlobalOrd>;
 template class Tpetra::CrsMatrix<Ionosphere::Scalar, Ionosphere::LocalOrd,
                                  Ionosphere::GlobalOrd>;
+template class Teuchos::Comm<int>;
