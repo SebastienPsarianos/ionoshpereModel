@@ -1,5 +1,5 @@
 #pragma once
-#include "ionosphere/IonosphereTypes.hpp"
+#include "ionosphere/TrilinosAliases.hpp"
 
 class Solver {
     void calculatePotential(Ionosphere::MultiVectorRCP conductance,

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Teuchos_RCP.hpp>
+#include <Teuchos_RCPDecl.hpp>
 #include <Tpetra_CrsMatrix_decl.hpp>
 #include <Tpetra_Map_decl.hpp>
 #include <Tpetra_MultiVector_decl.hpp>
@@ -22,6 +22,7 @@ using VectorRCP = Teuchos::RCP<Vector>;
 using MultiVectorRCP = Teuchos::RCP<MultiVector>;
 using MatrixRCP = Teuchos::RCP<Matrix>;
 using CommRCP = Teuchos::RCP<Comm>;
+
 } // namespace Ionosphere
 
 extern template class Tpetra::Map<Ionosphere::LocalOrd, Ionosphere::GlobalOrd>;

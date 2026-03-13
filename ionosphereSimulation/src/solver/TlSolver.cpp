@@ -1,5 +1,5 @@
 #include "ionosphere/solver/TlSolver.hpp"
-#include "ionosphere/IonosphereTypes.hpp"
+#include "ionosphere/TrilinosAliases.hpp"
 
 #include <BelosBlockGmresSolMgr.hpp>
 #include <BelosLinearProblem.hpp>
@@ -8,15 +8,15 @@
 #include <Teuchos_DataAccess.hpp>
 #include <Tpetra_ConfigDefs.hpp>
 #include <Tpetra_Operator.hpp>
-#include <algorithm>
 #include <cmath>
 #include <stdexcept>
 
 // TODO: Come up with a better setup
-#define IONOSPHERE_Radius_Earth 6378000.00
-#define IONOSPHERE_Height_Earth 400000.00
-#define RADIUS_EARTH (IONOSPHERE_Height_Earth + IONOSPHERE_Radius_Earth)
-#define RADIUS_EARTH_2 (RADIUS_EARTH * RADIUS_EARTH)
+const long long IONOSPHERE_Radius_Earth = 6378000.00;
+const long long IONOSPHERE_Height_Earth = 400000.00;
+const long long RADIUS_EARTH =
+    (IONOSPHERE_Height_Earth + IONOSPHERE_Radius_Earth);
+const long long RADIUS_EARTH_2 = (RADIUS_EARTH * RADIUS_EARTH);
 
 using namespace Ionosphere;
 
@@ -36,7 +36,7 @@ VectorRCP TlSolver::calculatePotential() {
     Ifpack2::Factory factory;
     Teuchos::RCP<precType> prec = factory.create<Matrix>("ILUT", A);
 
-    // TODO: Do some more preconditioner optimization
+    // TODO: Do some more preconditioner and solver optimization
     Teuchos::ParameterList precParams;
     precParams.set("fact: ilut level-of-fill", 2.0);
     precParams.set("fact: drop tolerance", 1e-4);

@@ -19,12 +19,13 @@ EmpConductance::EmpConductance(Teuchos::RCP<Coordinates> coords, MapRCP map,
     _readAndSyncJson(map->getComm());
 }
 
-MultiVectorRCP EmpConductance::computeConductance(int kp, double f107) {
+std::tuple<MultiVectorRCP, MultiVectorRCP, MultiVectorRCP>
+EmpConductance::computeConductance(int kp, double f107) {
     _computeAuroralConductance(kp);
     _computeEuvConductance(f107);
     _computeHppConductance();
 
-    return _conductance;
+    return {_auroralConductance, _euvConductance, _conductance};
 }
 
 void EmpConductance::_readAndSyncJson(CommRCP comm) {
@@ -116,7 +117,7 @@ void EmpConductance::_computeAuroralConductance(int kp) {
         double mlt = _coords->localIdx2Mlt(i);
         double mlat = _coords->localIdx2MagGeo(i).latitude;
 
-        // TODO: Testing clamping outside of 50
+        // Clamping outside of 50
         double mlatDeg = mlat * 180.0 / M_PI;
         if (std::abs(mlatDeg) < 50.0) {
             pedersonConductances[i] = 0.0;
@@ -137,7 +138,7 @@ void EmpConductance::_computeAuroralConductance(int kp) {
             hallH0, fourierSeries(hallData["up_slope"], mlt),
             fourierSeries(hallData["down_slope"], mlt));
 
-        // TODO: Testing the clamping described in the paper
+        // The clamping described in the paper
         if (std::abs(mlatDeg) < pedH0) {
             pedersonConductances[i] = std::max(0.0, pedVal);
         } else {
@@ -176,9 +177,5 @@ void EmpConductance::_computeHppConductance() {
         hppPedersonConductance[i] = std::max(hppPedersonConductance[i], 0.25);
         hppHallConductance[i] = std::max(hppHallConductance[i], 0.25);
         hppParallelConductance[i] = _sig0;
-
-        hppPedersonConductance[i] = 2;
-        hppHallConductance[i] = 2;
-        hppParallelConductance[i] = 20;
     }
 }
