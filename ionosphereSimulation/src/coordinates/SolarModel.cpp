@@ -2,6 +2,8 @@
 
 #include <cmath>
 
+using namespace Ionosphere;
+
 SolarModel::SolarModel(int year, int month, int day, int hour) {
     // "Correcting" the month (Grena paper)
     if (month <= 2) {

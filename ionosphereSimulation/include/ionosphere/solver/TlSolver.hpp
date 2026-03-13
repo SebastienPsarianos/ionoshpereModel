@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ionosphere/IonosphereTypes.hpp"
+#include "ionosphere/TrilinosAliases.hpp"
 #include "ionosphere/coordinates/Coordinates.hpp"
 #include "ionosphere/solver/Solver.hpp"
 

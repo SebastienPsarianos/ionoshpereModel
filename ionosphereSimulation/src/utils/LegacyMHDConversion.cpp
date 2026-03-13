@@ -1,7 +1,8 @@
 #include "ionosphere/utils/LegacyMHDConversion.hpp"
-#include "Teuchos_Comm.hpp"
-#include "ionosphere/IonosphereTypes.hpp"
+#include "ionosphere/TrilinosAliases.hpp"
 #include "ionosphere/coordinates/Coordinates.hpp"
+
+#include <Teuchos_Comm.hpp>
 #include <Tpetra_Core.hpp>
 #include <fstream>
 #include <iostream>

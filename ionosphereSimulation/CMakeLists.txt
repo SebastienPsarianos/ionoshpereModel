@@ -28,10 +28,11 @@ find_package(Trilinos REQUIRED)
 add_executable(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PRIVATE
     src/main.cpp
-    src/coordinates/Grid.cpp
     src/coordinates/Coordinates.cpp
     src/coordinates/SolarModel.cpp
     src/coordinates/DipoleModel.cpp
+    src/coordinates/CoordinateTypes.cpp
+    src/TrilinosAliases.cpp
     src/utils/LegacyMHDConversion.cpp
     src/conductance/EmpConductance.cpp
     src/conductance/utils.cpp

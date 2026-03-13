@@ -1,7 +1,7 @@
-#include "Teuchos_RCPDecl.hpp"
-#include "ionosphere/IonosphereTypes.hpp"
+#include "ionosphere/TrilinosAliases.hpp"
 #include "ionosphere/coordinates/Coordinates.hpp"
 
+#include <Teuchos_RCPDecl.hpp>
 #include <string>
 
 class LegacyMHDConversion {

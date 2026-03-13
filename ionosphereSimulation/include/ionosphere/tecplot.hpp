@@ -1,22 +1,24 @@
 #include <cmath>
 
-#include "Tpetra_MultiVector_decl.hpp"
-#include "Tpetra_Vector_decl.hpp"
+#include "ionosphere/TrilinosAliases.hpp"
+
 #include <Teuchos_Comm.hpp>
 #include <Tpetra_Core.hpp>
 #include <Tpetra_Export.hpp>
-
+#include <Tpetra_MultiVector_decl.hpp>
+#include <Tpetra_Vector_decl.hpp>
 #include <fstream>
-
 #include <iomanip>
 
-inline void exportToTecplot(
-    const std::string& filename,
-    Teuchos::RCP<const Tpetra::MultiVector<double, int, long long>> coords,
-    Teuchos::RCP<const Tpetra::Vector<double, int, long long>> potential,
-    Teuchos::RCP<const Tpetra::Vector<double, int, long long>> sourceTerm,
-    Teuchos::RCP<const Tpetra::MultiVector<double, int, long long>> conductance,
-    Teuchos::RCP<const Teuchos::Comm<int>> comm, int nTh, int nPh) {
+inline void exportToTecplot(const std::string& filename,
+                            Ionosphere::MultiVectorRCP coords,
+                            Ionosphere::VectorRCP potential,
+                            Ionosphere::VectorRCP sourceTerm,
+                            Ionosphere::MultiVectorRCP auroralCondctance,
+                            Ionosphere::MultiVectorRCP euvConductance,
+                            Ionosphere::MultiVectorRCP conductance,
+                            Teuchos::RCP<const Teuchos::Comm<int>> comm,
+                            int nTh, int nPh) {
 
     // 1. Create a root map where Rank 0 owns all the elements
     long long globalElements = nTh * nPh;
@@ -25,7 +27,6 @@ inline void exportToTecplot(
     auto rootMap = Teuchos::rcp(new Tpetra::Map<int, long long>(
         globalElements, localElements, 0, comm));
 
-    // 2. Create the root vectors to hold the gathered data
     auto rootCoords = Teuchos::rcp(
         new Tpetra::MultiVector<double, int, long long>(rootMap, 2));
     auto rootPotential =
@@ -34,8 +35,11 @@ inline void exportToTecplot(
         Teuchos::rcp(new Tpetra::Vector<double, int, long long>(rootMap));
     auto rootConductance = Teuchos::rcp(
         new Tpetra::MultiVector<double, int, long long>(rootMap, 3));
+    auto rootAuroralConductance = Teuchos::rcp(
+        new Tpetra::MultiVector<double, int, long long>(rootMap, 3));
+    auto rootEuvConductance = Teuchos::rcp(
+        new Tpetra::MultiVector<double, int, long long>(rootMap, 3));
 
-    // 3. Export the distributed data to Rank 0
     auto distMap = coords->getMap();
     Tpetra::Export<int, long long> exporter(distMap, rootMap);
 
@@ -43,6 +47,9 @@ inline void exportToTecplot(
     rootPotential->doExport(*potential, exporter, Tpetra::INSERT);
     rootSourceTerm->doExport(*sourceTerm, exporter, Tpetra::INSERT);
     rootConductance->doExport(*conductance, exporter, Tpetra::INSERT);
+    rootAuroralConductance->doExport(*auroralCondctance, exporter,
+                                     Tpetra::INSERT);
+    rootEuvConductance->doExport(*euvConductance, exporter, Tpetra::INSERT);
 
     // 4. Rank 0 writes the Tecplot file
     if (comm->getRank() == 0) {
@@ -60,11 +67,21 @@ inline void exportToTecplot(
         auto hallVals = rootConductance->getData(1);
         auto parallelVals = rootConductance->getData(2);
 
+        auto auroralpedersonVals = rootAuroralConductance->getData(0);
+        auto auroralhallVals = rootAuroralConductance->getData(1);
+        auto auroralparallelVals = rootAuroralConductance->getData(2);
+
+        auto euvpedersonVals = rootEuvConductance->getData(0);
+        auto euvhallVals = rootEuvConductance->getData(1);
+        auto euvparallelVals = rootEuvConductance->getData(2);
+
         // --- Tecplot Header ---
         outFile << "TITLE = \"Ionosphere Potential Solution\"\n";
         outFile << "VARIABLES = \"X\", \"Y\", \"Z\", \"Theta\", \"Phi\", "
                    "\"Potential\", \"J_R\", \"Sigma_P\", \"Sigma_H\", "
-                   "\"Sigma_0\"\n";
+                   "\"Sigma_0\", \"Sigma_P_AUR\", \"Sigma_H_AUR\", "
+                   "\"Sigma_0_AUR\", "
+                   "\"Sigma_P_EUV\", \"Sigma_H_EUV\", \"Sigma_0_EUV\", \n";
         // Zone definition: I is the fastest varying index (theta), J is the
         // slower (phi)
         outFile << "ZONE I=" << nTh << ", J=" << nPh << ", DATAPACKING=POINT\n";
@@ -82,7 +99,11 @@ inline void exportToTecplot(
                 outFile << x << " " << y << " " << z << " " << th_ << " " << ph_
                         << " " << potVals[id] << " " << jrVals[id] << " "
                         << pedersonVals[id] << " " << hallVals[id] << " "
-                        << parallelVals[id] << "\n";
+                        << parallelVals[id] << " " << auroralpedersonVals[id]
+                        << " " << auroralhallVals[id] << " "
+                        << auroralparallelVals[id] << " " << euvpedersonVals[id]
+                        << " " << euvhallVals[id] << " " << euvparallelVals[id]
+                        << "\n";
             }
         }
 

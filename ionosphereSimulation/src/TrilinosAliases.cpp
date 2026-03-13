@@ -1,4 +1,4 @@
-#include "ionosphere/IonosphereTypes.hpp"
+#include "ionosphere/TrilinosAliases.hpp"
 
 #include <Tpetra_CrsMatrix_def.hpp>
 #include <Tpetra_Map_def.hpp>

@@ -1,5 +1,5 @@
 #pragma once
-#include "ionosphere/IonosphereTypes.hpp"
+#include "ionosphere/TrilinosAliases.hpp"
 #include "ionosphere/coordinates/Coordinates.hpp"
 
 #include <Teuchos_RCP.hpp>
@@ -11,7 +11,9 @@ class EmpConductance {
     EmpConductance(Teuchos::RCP<Coordinates> coords, Ionosphere::MapRCP map,
                    Ionosphere::Scalar sig0);
 
-    Ionosphere::MultiVectorRCP computeConductance(int kp, double f107);
+    std::tuple<Ionosphere::MultiVectorRCP, Ionosphere::MultiVectorRCP,
+               Ionosphere::MultiVectorRCP>
+    computeConductance(int kp, double f107);
 
   private:
     void _computeAuroralConductance(int kp);

@@ -2,6 +2,8 @@
 
 #include <cmath>
 
+using namespace Ionosphere;
+
 DipoleModel::DipoleModel() {
     using Eigen::Vector3d;
 

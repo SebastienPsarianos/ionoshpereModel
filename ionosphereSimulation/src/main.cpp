@@ -1,4 +1,4 @@
-#include "ionosphere/IonosphereTypes.hpp"
+#include "ionosphere/TrilinosAliases.hpp"
 #include "ionosphere/conductance/EmpConductance.hpp"
 #include "ionosphere/coordinates/Coordinates.hpp"
 #include "ionosphere/solver/TlSolver.hpp"
@@ -80,7 +80,8 @@ int main(int argc, char* argv[]) {
     /*** END MHD INTERPOLATION ***/
 
     /*** BEGIN CONDUCTANCE SOLVE ***/
-    MultiVectorRCP conductance =
+
+    auto [auroralConductance, euvConductance, conductance] =
         EmpConductance(coords, map, SIG0).computeConductance(KP, F107);
     /*** END CONDUCTANCE SOLVE ***/
 
@@ -91,9 +92,9 @@ int main(int argc, char* argv[]) {
 
     /*** BEGIN PLOTTING ***/
     if (useTecplot) {
-        exportToTecplot("data/test3.dat", coords->multiVector(), result,
-                        sourceTerm, conductance, comm, coords->nTh,
-                        coords->nPh);
+        exportToTecplot("data/solvedPotential.dat", coords->multiVector(),
+                        result, sourceTerm, auroralConductance, euvConductance,
+                        conductance, comm, coords->nTh, coords->nPh);
     } else {
         exportToMatplotlib("data/solvedPotential.txt", coords->multiVector(),
                            result, comm, coords->nTh, coords->nPh);
