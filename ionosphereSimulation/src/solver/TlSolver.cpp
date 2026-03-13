@@ -4,7 +4,7 @@
 #include <BelosBlockGmresSolMgr.hpp>
 #include <BelosLinearProblem.hpp>
 #include <BelosTpetraAdapter.hpp>
-#include <Ifpack2_Factory.hpp>
+#include <MueLu_CreateTpetraPreconditioner.hpp>
 #include <Teuchos_DataAccess.hpp>
 #include <Tpetra_ConfigDefs.hpp>
 #include <Tpetra_Operator.hpp>
@@ -26,23 +26,27 @@ TlSolver::TlSolver(Teuchos::RCP<Coordinates> coords,
     : _coords(coords), _conductance(conductance), _sourceTerm(sourceTerm),
       _map(map) {}
 
+MatrixRCP TlSolver::buildMatrix() {
+    MultiVectorRCP coefficients = _calculateCoefficients();
+    return _buildGrid(coefficients);
+}
+
 VectorRCP TlSolver::calculatePotential() {
 
-    MultiVectorRCP coefficients = _calculateCoefficients();
-    MatrixRCP A = _buildGrid(coefficients);
+    MatrixRCP A = buildMatrix();
 
-    using precType = Ifpack2::Preconditioner<Scalar, LocalOrd, GlobalOrd>;
+    // MueLu AMG preconditioner — smoothed aggregation for elliptic PDE
+    Teuchos::ParameterList mueluParams;
+    mueluParams.set("multigrid algorithm", "sa");
+    mueluParams.set("max levels", 5);
+    mueluParams.set("coarse: max size", 500);
+    mueluParams.set("smoother: type", "CHEBYSHEV");
+    mueluParams.set("coarse: type", "KLU2");
+    mueluParams.set("verbosity", "low");
 
-    Ifpack2::Factory factory;
-    Teuchos::RCP<precType> prec = factory.create<Matrix>("ILUT", A);
-
-    // TODO: Do some more preconditioner and solver optimization
-    Teuchos::ParameterList precParams;
-    precParams.set("fact: ilut level-of-fill", 2.0);
-    precParams.set("fact: drop tolerance", 1e-4);
-    prec->setParameters(precParams);
-    prec->initialize();
-    prec->compute();
+    auto prec = MueLu::CreateTpetraPreconditioner(
+        Teuchos::rcp_static_cast<Tpetra::Operator<Scalar, LocalOrd, GlobalOrd>>(A),
+        mueluParams);
     auto x = Teuchos::rcp(new Vector(_map));
     x->putScalar(0.0);
 
@@ -88,7 +92,7 @@ VectorRCP TlSolver::calculatePotential() {
     }
 
     auto solverParams = Teuchos::parameterList();
-    solverParams->set("Maximum Iterations", 5000);
+    solverParams->set("Maximum Iterations", 200);
     solverParams->set("Convergence Tolerance", 1e-6);
     solverParams->set("Estimate Condition Number", true);
 

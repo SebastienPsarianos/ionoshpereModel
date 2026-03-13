@@ -1,6 +1,6 @@
 spack:
   specs:
-  - trilinos@16.0.0 ~fortran +mpi +shared +tpetra %apple-clang@17.0.0
+  - trilinos@16.0.0 ~fortran +mpi +shared +tpetra +zoltan2 %apple-clang@17.0.0
 
   packages:
     mpi:

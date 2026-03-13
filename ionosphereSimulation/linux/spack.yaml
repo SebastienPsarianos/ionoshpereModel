@@ -1,6 +1,6 @@
 spack:
   specs:
-  - trilinos@16.0.0 ~fortran +mpi +shared +tpetra %gcc
+  - trilinos@16.0.0 ~fortran +mpi +shared +tpetra +zoltan2 %gcc
 
   packages:
     mpi:

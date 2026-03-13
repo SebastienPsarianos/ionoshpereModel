@@ -12,9 +12,11 @@ class TlSolver : Solver {
 
     Ionosphere::VectorRCP calculatePotential();
 
+    /// Build the stiffness matrix on the current map (exposed for repartitioning)
+    Ionosphere::MatrixRCP buildMatrix();
+
   private:
     Ionosphere::MultiVectorRCP _calculateCoefficients();
-    // TODO: Might not need this? Ionosphere::VectorRCP _buildSourceVector();
     Ionosphere::MatrixRCP _buildGrid(Ionosphere::MultiVectorRCP coefficients);
     Ionosphere::MultiVectorRCP _gatherPoleData();
 

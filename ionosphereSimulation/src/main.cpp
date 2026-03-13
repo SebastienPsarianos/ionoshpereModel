@@ -5,6 +5,10 @@
 #include "ionosphere/tecplot.hpp"
 #include "ionosphere/utils/LegacyMHDConversion.hpp"
 #include <Tpetra_Core.hpp>
+#include <Tpetra_Distributor.hpp>
+#include <Tpetra_Import.hpp>
+#include <Zoltan2_PartitioningProblem.hpp>
+#include <Zoltan2_TpetraCrsGraphAdapter.hpp>
 #include <iostream>
 #include <stdexcept>
 
@@ -85,9 +89,74 @@ int main(int argc, char* argv[]) {
         EmpConductance(coords, map, SIG0).computeConductance(KP, F107);
     /*** END CONDUCTANCE SOLVE ***/
 
+    /*** BEGIN ZOLTAN2 REPARTITIONING ***/
+    // Build matrix on the naive map so Zoltan2 can analyze the graph
+    TlSolver naiveSolver(coords, conductance, sourceTerm, map);
+    auto naiveMatrix = naiveSolver.buildMatrix();
+
+    // Use Zoltan2 hypergraph partitioning on the matrix sparsity pattern
+    using GraphAdapter = Zoltan2::TpetraCrsGraphAdapter<
+        Tpetra::CrsGraph<LocalOrd, GlobalOrd>>;
+
+    auto graph = naiveMatrix->getCrsGraph();
+    GraphAdapter adapter(rcp(new Tpetra::CrsGraph<LocalOrd, GlobalOrd>(*graph)));
+
+    Teuchos::ParameterList zoltanParams;
+    zoltanParams.set("algorithm", "phg");
+    zoltanParams.set("num_global_parts", static_cast<int>(comm->getSize()));
+
+    Zoltan2::PartitioningProblem<GraphAdapter> problem(&adapter, &zoltanParams);
+    problem.solve();
+
+    // Build new map from the Zoltan2 solution using Distributor for all-to-all
+    auto& solution = problem.getSolution();
+    auto partList = solution.getPartListView();
+    auto myGids = map->getMyGlobalIndices();
+    auto numLocal = map->getLocalNumElements();
+
+    // Each rank sends its GIDs to the rank Zoltan2 assigned them to
+    Teuchos::Array<int> exportPIDs(numLocal);
+    Teuchos::Array<GlobalOrd> exportGIDs(numLocal);
+    for (size_t i = 0; i < numLocal; i++) {
+        exportPIDs[i] = static_cast<int>(partList[i]);
+        exportGIDs[i] = myGids[i];
+    }
+
+    Tpetra::Distributor distributor(comm);
+    size_t numImports = distributor.createFromSends(exportPIDs());
+
+    Teuchos::Array<GlobalOrd> importGIDs(numImports);
+    distributor.doPostsAndWaits(exportGIDs().getConst(), 1, importGIDs());
+
+    auto invalidGST = Teuchos::OrdinalTraits<Tpetra::global_size_t>::invalid();
+    auto newMap = rcp(new Map(invalidGST, importGIDs(), 0, comm));
+
+    // Redistribute all data to the optimal map
+    using Import = Tpetra::Import<LocalOrd, GlobalOrd>;
+    Import importer(map, newMap);
+
+    auto newCoordsMv = rcp(new MultiVector(newMap, 2));
+    newCoordsMv->doImport(*coords->multiVector(), importer, Tpetra::INSERT);
+
+    auto newConductance = rcp(new MultiVector(newMap, conductance->getNumVectors()));
+    newConductance->doImport(*conductance, importer, Tpetra::INSERT);
+
+    auto newSourceTerm = rcp(new Vector(newMap));
+    newSourceTerm->doImport(*sourceTerm, importer, Tpetra::INSERT);
+
+    auto newCoords = rcp(new Coordinates(newCoordsMv, dipoleModel, solarModel,
+                                         nTh, nPh, coords->dTh, coords->dPh));
+    /*** END ZOLTAN2 REPARTITIONING ***/
+
     /*** BEGIN POTENTIAL SOLVE ***/
-    TlSolver solver(coords, conductance, sourceTerm, map);
+    TlSolver solver(newCoords, newConductance, newSourceTerm, newMap);
     VectorRCP result = solver.calculatePotential();
+
+    // Import result back to original map for output
+    Import exportImporter(newMap, map);
+    auto resultOnOrigMap = rcp(new Vector(map));
+    resultOnOrigMap->doImport(*result, exportImporter, Tpetra::INSERT);
+    result = resultOnOrigMap;
     /*** END POTENTIAL SOLVE ***/
 
     /*** BEGIN PLOTTING ***/
