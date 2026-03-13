@@ -24,20 +24,18 @@ target_include_directories(json_lib INTERFACE
 # 3. Trilinos
 find_package(Trilinos REQUIRED)
 
-# 4. Build Exec
+#  Build Exec
 add_executable(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PRIVATE
     src/main.cpp
-    src/utils/Grid.cpp
-    src/utils/Coordinates.cpp
+    src/coordinates/Grid.cpp
+    src/coordinates/Coordinates.cpp
+    src/coordinates/SolarModel.cpp
+    src/coordinates/DipoleModel.cpp
     src/utils/LegacyMHDConversion.cpp
     src/conductance/EmpConductance.cpp
     src/conductance/utils.cpp
-    src/conductance/SolarModel.cpp
-    src/conductance/DipoleModel.cpp
-    src/solver/GsSolver.cpp
     src/solver/TlSolver.cpp
-    src/postProcessing/EField.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE 

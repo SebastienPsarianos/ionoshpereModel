@@ -18,5 +18,4 @@ fi
 
 spack env activate "$SPACK_ENV_DIR"
 
-cd build
-mpirun -np 8 ./IonosphereSolver "$@"
+mpirun -np 8 ./build/IonosphereSolver "$@"

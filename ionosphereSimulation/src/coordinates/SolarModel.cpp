@@ -1,4 +1,4 @@
-#include "ionosphere/conductance/SolarModel.hpp"
+#include "ionosphere/coordinates/SolarModel.hpp"
 
 #include <cmath>
 

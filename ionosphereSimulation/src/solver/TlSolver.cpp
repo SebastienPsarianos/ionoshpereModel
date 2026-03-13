@@ -1,6 +1,4 @@
 #include "ionosphere/solver/TlSolver.hpp"
-#include "Tpetra_ConfigDefs.hpp"
-#include "ionosphere/Constants.hpp"
 #include "ionosphere/IonosphereTypes.hpp"
 
 #include <BelosBlockGmresSolMgr.hpp>
@@ -8,19 +6,25 @@
 #include <BelosTpetraAdapter.hpp>
 #include <Ifpack2_Factory.hpp>
 #include <Teuchos_DataAccess.hpp>
+#include <Tpetra_ConfigDefs.hpp>
 #include <Tpetra_Operator.hpp>
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
 
+// TODO: Come up with a better setup
+#define IONOSPHERE_Radius_Earth 6378000.00
+#define IONOSPHERE_Height_Earth 400000.00
+#define RADIUS_EARTH (IONOSPHERE_Height_Earth + IONOSPHERE_Radius_Earth)
+#define RADIUS_EARTH_2 (RADIUS_EARTH * RADIUS_EARTH)
+
 using namespace Ionosphere;
 
-// TODO: Figure out if this needs to be a class
 TlSolver::TlSolver(Teuchos::RCP<Coordinates> coords,
                    Ionosphere::MultiVectorRCP conductance,
                    Ionosphere::VectorRCP sourceTerm, Ionosphere::MapRCP map)
-    : Solver(coords->nTh, coords->nPh), _coords(coords),
-      _conductance(conductance), _sourceTerm(sourceTerm), _map(map) {}
+    : _coords(coords), _conductance(conductance), _sourceTerm(sourceTerm),
+      _map(map) {}
 
 VectorRCP TlSolver::calculatePotential() {
 
@@ -32,7 +36,7 @@ VectorRCP TlSolver::calculatePotential() {
     Ifpack2::Factory factory;
     Teuchos::RCP<precType> prec = factory.create<Matrix>("ILUT", A);
 
-    // TODO: Figure out the preconditioner parameters
+    // TODO: Do some more preconditioner optimization
     Teuchos::ParameterList precParams;
     precParams.set("fact: ilut level-of-fill", 2.0);
     precParams.set("fact: drop tolerance", 1e-4);
@@ -51,11 +55,11 @@ VectorRCP TlSolver::calculatePotential() {
         auto myGridPoints = _map->getMyGlobalIndices();
         for (LocalOrd i = 0; i < static_cast<LocalOrd>(myGridPoints.size());
              i++) {
-            GlobalOrd gid = myGridPoints[i];
-            GlobalOrd theta = gid % _coords->nTh;
-            GlobalOrd phi = gid / _coords->nTh;
+            GlobalOrd currentGid = myGridPoints[i];
+            GlobalOrd theta = currentGid % _coords->nTh;
+            GlobalOrd phi = currentGid / _coords->nTh;
 
-            if (gid == pinPoint) {
+            if (currentGid == pinPoint) {
                 rhsData[i] = 0.0;
             } else if (theta == 0 || theta == _coords->nTh - 1) {
                 // We set the two primary pole points to the cap condition
@@ -136,9 +140,9 @@ MultiVectorRCP TlSolver::_gatherPoleData() {
 
     // Construct lookup table of the entries we want to keep
     // 0 is the pole and then the rest are the ring nodes. pdIdx gives the index
-    // in the localVector
+    // in the localVector. TODO: This needs to be cleaner
     struct PoleEntry {
-        GlobalOrd gid;
+        GlobalOrd currentGid;
         GlobalOrd pdIdx;
     };
 
@@ -161,10 +165,10 @@ MultiVectorRCP TlSolver::_gatherPoleData() {
 
     // Compute the required spherical conductance values for each pole point
     for (const auto& entry : entries) {
-        if (!_map->isNodeGlobalElement(entry.gid))
+        if (!_map->isNodeGlobalElement(entry.currentGid))
             continue;
 
-        auto li = _map->getLocalElement(entry.gid);
+        auto li = _map->getLocalElement(entry.currentGid);
         Scalar th = thVals[li];
         Scalar cosE = (-2.0 * std::cos(th)) /
                       std::sqrt(1.0 + 3.0 * std::cos(th) * std::cos(th));
@@ -214,19 +218,17 @@ MatrixRCP TlSolver::_buildGrid(MultiVectorRCP coefficients) {
     auto sigThPh = poleData->getData(2);
 
     // Set phi == 0 on the equator to be a gauge condition
-    GlobalOrd gaugePoint = _coords->nTh / 2;
 
-    for (LocalOrd i = 0; i < static_cast<LocalOrd>(myGridPoints.size()); i++) {
-        auto gridPoint = myGridPoints[i];
-
-        GlobalOrd theta = gridPoint % _coords->nTh;
-        GlobalOrd phi = gridPoint / _coords->nTh;
+    for (GlobalOrd i = 0; i < static_cast<GlobalOrd>(myGridPoints.size());
+         i++) {
+        GlobalOrd gridPoint = myGridPoints[i];
+        auto [theta, phi] = _coords->globalIdx2ThetaPhi(gridPoint);
 
         Teuchos::Array<GlobalOrd> matrixIdcs;
         Teuchos::Array<Scalar> vals;
 
-        // Pin the gauge point and then skip
-        if (gridPoint == gaugePoint) {
+        // Pin the gauge point on the equator and then skip
+        if (theta == _coords->nTh / 2 && phi == 0) {
             matrixIdcs.push_back(gridPoint);
             vals.push_back(1);
             A->insertGlobalValues(gridPoint, matrixIdcs, vals);
@@ -237,7 +239,6 @@ MatrixRCP TlSolver::_buildGrid(MultiVectorRCP coefficients) {
 
         // Applying the polar cap flux boundary condition (see notes)
         if (theta == 0 || theta == _coords->nTh - 1) {
-
             if (phi == 0) {
                 Scalar theta0 = _coords->dTh / 2;
 
@@ -352,20 +353,18 @@ MultiVectorRCP TlSolver::_calculateCoefficients() {
     // Build first derivative matrices
     for (LocalOrd i = 0; i < static_cast<LocalOrd>(myGridPointsGlobal.size());
          i++) {
-        GlobalOrd currentPoint = myGridPointsGlobal[i];
-
-        GlobalOrd theta = currentPoint % _coords->nTh;
-        GlobalOrd phi = currentPoint / _coords->nTh;
+        GlobalOrd currentGid = myGridPointsGlobal[i];
+        auto [theta, phi] = _coords->globalIdx2ThetaPhi(currentGid);
 
         Teuchos::Array<GlobalOrd> matrixIdcs_th;
         Teuchos::Array<Scalar> vals_th;
         Teuchos::Array<GlobalOrd> matrixIdcs_ph;
         Teuchos::Array<Scalar> vals_ph;
 
-        GlobalOrd left = currentPoint - _coords->nTh;
-        GlobalOrd right = currentPoint + _coords->nTh;
-        GlobalOrd up = currentPoint - 1;
-        GlobalOrd down = currentPoint + 1;
+        GlobalOrd left = currentGid - _coords->nTh;
+        GlobalOrd right = currentGid + _coords->nTh;
+        GlobalOrd up = currentGid - 1;
+        GlobalOrd down = currentGid + 1;
 
         if (phi == 0) {
             left = theta + (_coords->nPh - 1) * _coords->nTh;
@@ -374,7 +373,7 @@ MultiVectorRCP TlSolver::_calculateCoefficients() {
         }
 
         if (theta == 0 || theta == _coords->nTh - 1) {
-            matrixIdcs_th.push_back(currentPoint);
+            matrixIdcs_th.push_back(currentGid);
             vals_th.push_back(0.0);
         } else if (theta == 1) {
             // One sided stencil for north pole (second order)
@@ -407,7 +406,7 @@ MultiVectorRCP TlSolver::_calculateCoefficients() {
         }
 
         if (theta == 0 || theta == _coords->nTh - 1) {
-            matrixIdcs_ph.push_back(currentPoint);
+            matrixIdcs_ph.push_back(currentGid);
             vals_ph.push_back(0.0);
         } else {
             matrixIdcs_ph.push_back(right);
@@ -415,8 +414,8 @@ MultiVectorRCP TlSolver::_calculateCoefficients() {
             matrixIdcs_ph.push_back(left);
             vals_ph.push_back(-1.0 / (2 * _coords->dPh));
         }
-        D_th->insertGlobalValues(currentPoint, matrixIdcs_th, vals_th);
-        D_ph->insertGlobalValues(currentPoint, matrixIdcs_ph, vals_ph);
+        D_th->insertGlobalValues(currentGid, matrixIdcs_th, vals_th);
+        D_ph->insertGlobalValues(currentGid, matrixIdcs_ph, vals_ph);
     }
     D_th->fillComplete();
     D_ph->fillComplete();

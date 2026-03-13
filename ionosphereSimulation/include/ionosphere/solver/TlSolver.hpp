@@ -1,8 +1,8 @@
 #pragma once
 
 #include "ionosphere/IonosphereTypes.hpp"
+#include "ionosphere/coordinates/Coordinates.hpp"
 #include "ionosphere/solver/Solver.hpp"
-#include "ionosphere/utils/Coordinates.hpp"
 
 class TlSolver : Solver {
   public:
