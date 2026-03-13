@@ -1,5 +1,4 @@
 #include "ionosphere/solver/GsSolver.hpp"
-#include "ionosphere/Constants.hpp"
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>

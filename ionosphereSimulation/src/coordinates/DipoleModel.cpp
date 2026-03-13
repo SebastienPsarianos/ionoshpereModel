@@ -1,11 +1,13 @@
-#include "ionosphere/conductance/DipoleModel.hpp"
+#include "ionosphere/coordinates/DipoleModel.hpp"
 
 #include <cmath>
 
 DipoleModel::DipoleModel() {
     using Eigen::Vector3d;
 
-    // TODO: Read this from table and cite
+    // TODO:
+    // - Add some way to read this from a file.
+    // - Add the interpolation parameter.
     double g_10 = -29404.8;
     double g_11 = -1450.9;
     double h_11 = 4652.5;
@@ -21,6 +23,27 @@ DipoleModel::DipoleModel() {
     _rotationMatrix.row(0) = x_cd.normalized();
     _rotationMatrix.row(1) = y_cd.normalized();
     _rotationMatrix.row(2) = z_cd.normalized();
+}
+
+GeoSph DipoleModel::dipoleToGeoCentric(MagSph magCoords) const {
+    using Eigen::Vector3d;
+    using std::acos, std::atan2, std::cos, std::sin;
+
+    // Convert dipole spherical to dipole Cartesian (unit vector)
+    Vector3d r_cd(sin(magCoords.theta) * cos(magCoords.phi),
+                  sin(magCoords.theta) * sin(magCoords.phi),
+                  cos(magCoords.theta));
+
+    // R is orthogonal, so R^{-1} = R^T
+    Vector3d r_cart = _rotationMatrix.transpose() * r_cd;
+
+    GeoSph geoCoords;
+    geoCoords.theta = acos(r_cart.z());
+    geoCoords.phi = atan2(r_cart.y(), r_cart.x());
+    if (geoCoords.phi < 0.0) {
+        geoCoords.phi += 2.0 * M_PI;
+    }
+    return geoCoords;
 }
 
 MagSph DipoleModel::geoCentricToDipole(GeoSph geoCoords) const {
@@ -40,15 +63,4 @@ MagSph DipoleModel::geoCentricToDipole(GeoSph geoCoords) const {
         magCoords.phi += 2.0 * M_PI;
     }
     return magCoords;
-}
-
-double DipoleModel::computeMLT(MagGeo subsolar, MagGeo observer) const {
-    double mlt =
-        (observer.longitude - subsolar.longitude) * (180.0 / M_PI) / 15.0 +
-        12.0;
-    return std::fmod(mlt + 24.0, 24.0);
-}
-
-const Eigen::Matrix3d& DipoleModel::rotationMatrix() const {
-    return _rotationMatrix;
 }

@@ -1,5 +1,5 @@
 #pragma once
-#include "ionosphere/utils/Grid.hpp"
+#include "ionosphere/coordinates/Grid.hpp"
 
 #define SUNFREQ .0172019715
 

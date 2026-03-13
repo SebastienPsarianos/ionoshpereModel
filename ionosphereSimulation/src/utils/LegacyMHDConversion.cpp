@@ -1,7 +1,7 @@
 #include "ionosphere/utils/LegacyMHDConversion.hpp"
 #include "Teuchos_Comm.hpp"
 #include "ionosphere/IonosphereTypes.hpp"
-#include "ionosphere/utils/Coordinates.hpp"
+#include "ionosphere/coordinates/Coordinates.hpp"
 #include <Tpetra_Core.hpp>
 #include <fstream>
 #include <iostream>
@@ -12,6 +12,8 @@ using Teuchos::rcp;
 using Teuchos::RCP;
 
 void LegacyMHDConversion::processLegacyOutput(RCP<Coordinates>& coordinates,
+                                              RCP<DipoleModel> dipoleModel,
+                                              RCP<SolarModel> solarModel,
                                               VectorRCP& sourceTerm, MapRCP map,
                                               CommRCP comm, int nTh, int nPh,
                                               const std::string& filename) {
@@ -51,12 +53,6 @@ void LegacyMHDConversion::processLegacyOutput(RCP<Coordinates>& coordinates,
                     throw std::runtime_error(
                         "File structure incorrect for JR input data");
                 }
-
-                if (th == 0) {
-                    thVals[globalId] = thVals[globalId];
-                } else if (th == nTh - 1) {
-                    thVals[globalId] = thVals[globalId];
-                }
             }
         }
         dTh = thVals[1] - thVals[0];
@@ -73,7 +69,8 @@ void LegacyMHDConversion::processLegacyOutput(RCP<Coordinates>& coordinates,
     comm->broadcast(0, sizeof(double), (char*)&dTh);
     comm->broadcast(0, sizeof(double), (char*)&dPh);
 
-    coordinates = rcp(new Coordinates(coordVector, nTh, nPh, dTh, dPh));
+    coordinates = rcp(new Coordinates(coordVector, dipoleModel, solarModel, nTh,
+                                      nPh, dTh, dPh));
 }
 void LegacyMHDConversion::getGridSize(
     std::string filename, int* nTh, int* nPh,
@@ -89,7 +86,7 @@ void LegacyMHDConversion::getGridSize(
             std::sscanf(line.c_str(), "nTh: %d, nPh: %d", nTh, nPh);
         }
 
-        std::cout << nTh << " " << nPh << std::endl;
+        std::cout << *nTh << " " << *nPh << std::endl;
     }
 
     comm->broadcast(0, sizeof(int), (char*)nPh);

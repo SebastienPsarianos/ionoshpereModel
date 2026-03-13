@@ -1,4 +1,5 @@
-#include "ionosphere/utils/Grid.hpp"
+#include "ionosphere/coordinates/Grid.hpp"
+
 #include <optional>
 #include <stdexcept>
 

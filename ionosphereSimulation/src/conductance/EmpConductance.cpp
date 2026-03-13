@@ -10,12 +10,11 @@ using namespace Ionosphere;
 using nlohmann::json;
 
 EmpConductance::EmpConductance(Teuchos::RCP<Coordinates> coords, MapRCP map,
-                               Scalar sig0, int year, int day, int month,
-                               int hour)
+                               Scalar sig0)
     : _map(map), _euvConductance(new Ionosphere::MultiVector(map, 3)),
       _auroralConductance(new Ionosphere::MultiVector(map, 3)),
       _conductance(new Ionosphere::MultiVector(map, 3)), _sig0(sig0),
-      _dipoleModel(), _solarModel(year, month, day, hour), _coords(coords) {
+      _coords(coords) {
 
     _readAndSyncJson(map->getComm());
 }
@@ -38,9 +37,8 @@ void EmpConductance::_readAndSyncJson(CommRCP comm) {
     if (myRank == rootRank) {
         try {
             std::ifstream pedFile(
-                "../src/conductance/data/hardyPedersonCoeff.json");
-            std::ifstream hallFile(
-                "../src/conductance/data/hardyHallCoeff.json");
+                "src/conductance/data/hardyPedersonCoeff.json");
+            std::ifstream hallFile("src/conductance/data/hardyHallCoeff.json");
 
             if (!pedFile.is_open() || !hallFile.is_open()) {
                 throw std::runtime_error(
@@ -88,7 +86,7 @@ void EmpConductance::_computeEuvConductance(double f107) {
     auto hallConductances = _euvConductance->getDataNonConst(1);
 
     for (size_t i = 0; i < _coords->multiVector()->getLocalLength(); i++) {
-        double sza = _solarModel.computeZenith(_coords->geoGeo(i));
+        double sza = _coords->localIdx2Sza(i);
 
         if (sza >= M_PI / 2) {
             pedersonConductances[i] = 0;
@@ -114,18 +112,9 @@ void EmpConductance::_computeAuroralConductance(int kp) {
     auto pedersonConductances = _auroralConductance->getDataNonConst(0);
     auto hallConductances = _auroralConductance->getDataNonConst(1);
 
-    // Compute subsolar position once (doesn't depend on grid point)
-    GeoGeo subsolarGeo = _solarModel.computeSubSolar();
-    MagSph subsolarMag =
-        _dipoleModel.geoCentricToDipole(Coordinates::toGeoSph(subsolarGeo));
-    MagGeo subsolarMagGeo = Coordinates::toMagGeo(subsolarMag);
-
     for (size_t i = 0; i < _coords->multiVector()->getLocalLength(); i++) {
-        MagSph obsMag = _dipoleModel.geoCentricToDipole(_coords->geoSph(i));
-        MagGeo observerMagGeo = Coordinates::toMagGeo(obsMag);
-
-        double mlt = _dipoleModel.computeMLT(subsolarMagGeo, observerMagGeo);
-        double mlat = observerMagGeo.latitude;
+        double mlt = _coords->localIdx2Mlt(i);
+        double mlat = _coords->localIdx2MagGeo(i).latitude;
 
         // TODO: Testing clamping outside of 50
         double mlatDeg = mlat * 180.0 / M_PI;
@@ -186,7 +175,10 @@ void EmpConductance::_computeHppConductance() {
         // TODO: Testing minimum background conductance
         hppPedersonConductance[i] = std::max(hppPedersonConductance[i], 0.25);
         hppHallConductance[i] = std::max(hppHallConductance[i], 0.25);
-
         hppParallelConductance[i] = _sig0;
+
+        hppPedersonConductance[i] = 2;
+        hppHallConductance[i] = 2;
+        hppParallelConductance[i] = 20;
     }
 }

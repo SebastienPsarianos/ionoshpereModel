@@ -1,6 +1,6 @@
 #pragma once
+#include "ionosphere/coordinates/Grid.hpp"
 #include "ionosphere/solver/Solver.hpp"
-#include "ionosphere/utils/Grid.hpp"
 
 class GsSolver {
   public:
