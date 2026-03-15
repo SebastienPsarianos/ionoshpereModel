@@ -39,10 +39,16 @@ double Coordinates::localIdx2Sza(LocalOrd i) const {
 
 double Coordinates::localIdx2Mlt(LocalOrd i) const {
     double mlt = (localIdx2MagGeo(i).longitude - _subsolarPoint.longitude) *
-                     (15 / M_PI) +
+                     (12 / M_PI) +
                  12.0;
     return std::fmod(mlt + 24.0, 24.0);
 };
+
+double Coordinates::getMlt(MagGeo geo) {
+    double mlt =
+        (geo.longitude - _subsolarPoint.longitude) * (12 / M_PI) + 12.0;
+    return std::fmod(mlt + 24.0, 24.0);
+}
 
 GlobalOrd Coordinates::thPh2GlobalIdx(GlobalOrd thId, GlobalOrd phId) const {
     return thId + phId * nTh;
