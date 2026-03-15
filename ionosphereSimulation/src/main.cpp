@@ -66,6 +66,9 @@ int main(int argc, char* argv[]) {
             "Error reading source term data, ending execution");
     }
 
+    // p1 p2 p3
+    // map
+    // [1,2,3,4,5]
     auto map = rcp(new Map(nTh * nPh, 0, comm));
     auto sourceTerm = rcp(new Vector(map));
     RCP<Coordinates> coords;
@@ -92,9 +95,9 @@ int main(int argc, char* argv[]) {
 
     /*** BEGIN PLOTTING ***/
     if (useTecplot) {
-        exportToTecplot("data/solvedPotential.dat", coords->multiVector(),
-                        result, sourceTerm, auroralConductance, euvConductance,
-                        conductance, comm, coords->nTh, coords->nPh);
+        exportToTecplot("data/solvedPotential.dat", coords, result, sourceTerm,
+                        auroralConductance, euvConductance, conductance, comm,
+                        coords->nTh, coords->nPh);
     } else {
         exportToMatplotlib("data/solvedPotential.txt", coords->multiVector(),
                            result, comm, coords->nTh, coords->nPh);

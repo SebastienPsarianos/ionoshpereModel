@@ -115,11 +115,12 @@ void EmpConductance::_computeAuroralConductance(int kp) {
 
     for (size_t i = 0; i < _coords->multiVector()->getLocalLength(); i++) {
         double mlt = _coords->localIdx2Mlt(i);
-        double mlat = _coords->localIdx2MagGeo(i).latitude;
+        // TODO: Make sure I should be using the abs here
+        double mlat = std::abs(_coords->localIdx2MagGeo(i).latitude);
 
-        // Clamping outside of 50
+        // Clamping below 50 degrees latitude
         double mlatDeg = mlat * 180.0 / M_PI;
-        if (std::abs(mlatDeg) < 50.0) {
+        if (mlatDeg < 50.0) {
             pedersonConductances[i] = 0.0;
             hallConductances[i] = 0.0;
             continue;
@@ -129,14 +130,14 @@ void EmpConductance::_computeAuroralConductance(int kp) {
         double hallH0 = fourierSeries(hallData["max_latitude"], mlt);
 
         double pedVal = epsteinFunction(
-            std::abs(mlatDeg), fourierSeries(pedersonData["max_value"], mlt),
-            pedH0, fourierSeries(pedersonData["up_slope"], mlt),
+            mlatDeg, fourierSeries(pedersonData["max_value"], mlt), pedH0,
+            fourierSeries(pedersonData["up_slope"], mlt),
             fourierSeries(pedersonData["down_slope"], mlt));
 
-        double hallVal = epsteinFunction(
-            std::abs(mlatDeg), fourierSeries(hallData["max_value"], mlt),
-            hallH0, fourierSeries(hallData["up_slope"], mlt),
-            fourierSeries(hallData["down_slope"], mlt));
+        double hallVal =
+            epsteinFunction(mlatDeg, fourierSeries(hallData["max_value"], mlt),
+                            hallH0, fourierSeries(hallData["up_slope"], mlt),
+                            fourierSeries(hallData["down_slope"], mlt));
 
         // The clamping described in the paper
         if (std::abs(mlatDeg) < pedH0) {

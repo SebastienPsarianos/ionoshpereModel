@@ -1,6 +1,7 @@
 #include <cmath>
 
 #include "ionosphere/TrilinosAliases.hpp"
+#include "ionosphere/coordinates/Coordinates.hpp"
 
 #include <Teuchos_Comm.hpp>
 #include <Tpetra_Core.hpp>
@@ -11,7 +12,7 @@
 #include <iomanip>
 
 inline void exportToTecplot(const std::string& filename,
-                            Ionosphere::MultiVectorRCP coords,
+                            Teuchos::RCP<Coordinates> coordWrapper,
                             Ionosphere::VectorRCP potential,
                             Ionosphere::VectorRCP sourceTerm,
                             Ionosphere::MultiVectorRCP auroralCondctance,
@@ -23,6 +24,18 @@ inline void exportToTecplot(const std::string& filename,
     // 1. Create a root map where Rank 0 owns all the elements
     long long globalElements = nTh * nPh;
     size_t localElements = (comm->getRank() == 0) ? globalElements : 0;
+    auto coords = coordWrapper->multiVector();
+    auto distMap = coords->getMap();
+
+    // Compute MLT on the distributed map
+    auto mltVec =
+        Teuchos::rcp(new Tpetra::Vector<double, int, long long>(distMap));
+    {
+        auto mltData = mltVec->getDataNonConst(0);
+        for (size_t i = 0; i < mltVec->getLocalLength(); i++) {
+            mltData[i] = coordWrapper->localIdx2Mlt(i);
+        }
+    }
 
     auto rootMap = Teuchos::rcp(new Tpetra::Map<int, long long>(
         globalElements, localElements, 0, comm));
@@ -39,8 +52,8 @@ inline void exportToTecplot(const std::string& filename,
         new Tpetra::MultiVector<double, int, long long>(rootMap, 3));
     auto rootEuvConductance = Teuchos::rcp(
         new Tpetra::MultiVector<double, int, long long>(rootMap, 3));
-
-    auto distMap = coords->getMap();
+    auto rootMlt =
+        Teuchos::rcp(new Tpetra::Vector<double, int, long long>(rootMap));
     Tpetra::Export<int, long long> exporter(distMap, rootMap);
 
     rootCoords->doExport(*coords, exporter, Tpetra::INSERT);
@@ -50,6 +63,7 @@ inline void exportToTecplot(const std::string& filename,
     rootAuroralConductance->doExport(*auroralCondctance, exporter,
                                      Tpetra::INSERT);
     rootEuvConductance->doExport(*euvConductance, exporter, Tpetra::INSERT);
+    rootMlt->doExport(*mltVec, exporter, Tpetra::INSERT);
 
     // 4. Rank 0 writes the Tecplot file
     if (comm->getRank() == 0) {
@@ -75,13 +89,16 @@ inline void exportToTecplot(const std::string& filename,
         auto euvhallVals = rootEuvConductance->getData(1);
         auto euvparallelVals = rootEuvConductance->getData(2);
 
+        auto mltVals = rootMlt->getData(0);
+
         // --- Tecplot Header ---
         outFile << "TITLE = \"Ionosphere Potential Solution\"\n";
         outFile << "VARIABLES = \"X\", \"Y\", \"Z\", \"Theta\", \"Phi\", "
                    "\"Potential\", \"J_R\", \"Sigma_P\", \"Sigma_H\", "
                    "\"Sigma_0\", \"Sigma_P_AUR\", \"Sigma_H_AUR\", "
                    "\"Sigma_0_AUR\", "
-                   "\"Sigma_P_EUV\", \"Sigma_H_EUV\", \"Sigma_0_EUV\", \n";
+                   "\"Sigma_P_EUV\", \"Sigma_H_EUV\", \"Sigma_0_EUV\", \"MLT\""
+                   "\n";
         // Zone definition: I is the fastest varying index (theta), J is the
         // slower (phi)
         outFile << "ZONE I=" << nTh << ", J=" << nPh << ", DATAPACKING=POINT\n";
@@ -103,7 +120,7 @@ inline void exportToTecplot(const std::string& filename,
                         << " " << auroralhallVals[id] << " "
                         << auroralparallelVals[id] << " " << euvpedersonVals[id]
                         << " " << euvhallVals[id] << " " << euvparallelVals[id]
-                        << "\n";
+                        << " " << mltVals[id] << "\n";
             }
         }
 

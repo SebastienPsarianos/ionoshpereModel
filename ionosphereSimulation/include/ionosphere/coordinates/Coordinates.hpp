@@ -30,6 +30,8 @@ class Coordinates {
     // Exposes underlying coordinates
     Ionosphere::MultiVectorRCP multiVector() const;
 
+    double Coordinates::getMlt(Ionosphere::MagGeo geo);
+
     const Ionosphere::Scalar dTh;
     const Ionosphere::Scalar dPh;
     const Ionosphere::GlobalOrd nTh;
