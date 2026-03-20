@@ -1,18 +1,95 @@
 #include "ionosphere/coordinates/DipoleModel.hpp"
+#include "nlohmann/json"
 
 #include <cmath>
+#include <fstream>
 
 using namespace Ionosphere;
 
-DipoleModel::DipoleModel() {
+DipoleModel::DipoleModel(CommRCP comm, int year, int month, int day,
+                         double hour) {
     using Eigen::Vector3d;
+    using nlohmann::json;
+    using std::string;
+    using std::to_string;
 
-    // TODO:
-    // - Add some way to read this from a file.
-    // - Add the interpolation parameter.
-    double g_10 = -29404.8;
-    double g_11 = -1450.9;
-    double h_11 = 4652.5;
+    const int myRank = comm->getRank();
+    const int rootRank = 0;
+    std::string serializedData;
+    int dataLength = -1;
+    json igrfJson;
+
+    // Calculate the interpolated IGRF coefficient based on date
+    if (myRank == rootRank) {
+        std::ifstream igrfFile("data/IGRFCoeff.json");
+
+        if (!igrfFile.is_open()) {
+            throw std::runtime_error(
+                "Unable to open IGRF coefficient file. Should be located in "
+                "data/IGRFCoeff.json");
+        }
+
+        igrfFile >> igrfJson;
+
+        serializedData = igrfJson.dump();
+        dataLength = static_cast<int>(serializedData.size());
+    }
+
+    Teuchos::broadcast(*comm, rootRank, 1, &dataLength);
+
+    if (dataLength < 0)
+        throw std::runtime_error("JSON parse error");
+
+    if (myRank != rootRank) {
+        serializedData.resize(dataLength);
+    }
+
+    Teuchos::broadcast(*comm, rootRank, dataLength, &serializedData[0]);
+    igrfJson = json::parse(serializedData);
+
+    double fractionalYear = static_cast<double>(year) +
+                            static_cast<double>(month - 1) / 12.0 +
+                            static_cast<double>(day) / 365.0 + hour / 8760.0;
+    ;
+
+    int epoch = year - year % 5;
+    string epochString = to_string(epoch);
+    string nextEpochString = to_string(epoch + 5);
+    bool useSecularVariation = igrfJson.find(nextEpochString) == igrfJson.end();
+
+    double distanceFromEpoch = fractionalYear - epoch;
+    double g_10, g_11, h_11;
+
+    if (useSecularVariation) {
+        // Here we use the provided secular variation for the latest epoch
+        g_10 = static_cast<double>(igrfJson[epochString]["g10"]) +
+               static_cast<double>(igrfJson["sv"]["g10"]) * distanceFromEpoch;
+
+        g_11 = static_cast<double>(igrfJson[epochString]["g11"]) +
+               static_cast<double>(igrfJson["sv"]["g11"]) * distanceFromEpoch;
+
+        h_11 = static_cast<double>(igrfJson[epochString]["h11"]) +
+               static_cast<double>(igrfJson["sv"]["h11"]) * distanceFromEpoch;
+    } else {
+        // Here the interpolation is done between epochs
+        g_10 = static_cast<double>(igrfJson[epochString]["g10"]) +
+               distanceFromEpoch *
+                   (static_cast<double>(igrfJson[nextEpochString]["g10"]) -
+                    static_cast<double>(igrfJson[epochString]["g10"])) /
+                   5.0;
+
+        g_11 = static_cast<double>(igrfJson[epochString]["g11"]) +
+               distanceFromEpoch *
+                   (static_cast<double>(igrfJson[nextEpochString]["g11"]) -
+                    static_cast<double>(igrfJson[epochString]["g11"])) /
+                   5.0;
+
+        h_11 = static_cast<double>(igrfJson[epochString]["h11"]) +
+               distanceFromEpoch *
+                   (static_cast<double>(igrfJson[nextEpochString]["h11"]) -
+                    static_cast<double>(igrfJson[epochString]["h11"])) /
+                   5.0;
+    }
 
     Vector3d z_geo(0, 0, 1);
 

@@ -41,7 +41,7 @@ def run_pipeline(output_flag="-t"):
     run(["./run.sh", output_flag, "../data/sim_input.txt"], cwd=NEW_DIR)
 
     os.makedirs(DATA_DIR, exist_ok=True)
-    for src in glob.glob(NEW_DATA_DIR + "*"):
+    for src in glob.glob(NEW_DATA_DIR + "*.dat"):
         shutil.move(src, os.path.join(DATA_DIR, os.path.basename(src)))
 
 

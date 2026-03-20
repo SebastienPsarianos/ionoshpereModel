@@ -32,10 +32,11 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/coordinates/SolarModel.cpp
     src/coordinates/DipoleModel.cpp
     src/coordinates/CoordinateTypes.cpp
+    src/conductance/EmpConductance.cpp
+    src/conductance/HardyConductance.cpp
+    src/conductance/EuvConductance.cpp
     src/TrilinosAliases.cpp
     src/utils/LegacyMHDConversion.cpp
-    src/conductance/EmpConductance.cpp
-    src/conductance/utils.cpp
     src/solver/TlSolver.cpp
 )
 
