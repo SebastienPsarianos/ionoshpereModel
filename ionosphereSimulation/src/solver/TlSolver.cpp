@@ -37,7 +37,7 @@ VectorRCP TlSolver::calculatePotential() {
     Teuchos::RCP<precType> prec = factory.create<Matrix>("ILUT", A);
 
     // TODO: Do some more preconditioner and solver optimization
-    //  - Look into zoltan for map generation
+    //  - Look into zoltan for map optimization
     Teuchos::ParameterList precParams;
     precParams.set("fact: ilut level-of-fill", 2.0);
     precParams.set("fact: drop tolerance", 1e-4);
@@ -219,7 +219,6 @@ MatrixRCP TlSolver::_buildGrid(MultiVectorRCP coefficients) {
     auto sigThPh = poleData->getData(2);
 
     // Set phi == 0 on the equator to be a gauge condition
-
     for (GlobalOrd i = 0; i < static_cast<GlobalOrd>(myGridPoints.size());
          i++) {
         GlobalOrd gridPoint = myGridPoints[i];
@@ -243,7 +242,7 @@ MatrixRCP TlSolver::_buildGrid(MultiVectorRCP coefficients) {
             if (phi == 0) {
                 Scalar theta0 = _coords->dTh / 2;
 
-                // Grab the indecies in the poleData multivector
+                // Grab the indices in the poleData multivector
                 LocalOrd pole = theta == 0 ? 0 : (_coords->nPh + 1);
                 LocalOrd ringStart = (theta == 0) ? 1 : (_coords->nPh + 2);
 
@@ -256,9 +255,9 @@ MatrixRCP TlSolver::_buildGrid(MultiVectorRCP coefficients) {
                 // ring of theta values). Here we are using the 0 point for
                 // consistency sake.
                 Scalar poleCoefficient = 0;
-                for (GlobalOrd i = 0; i < _coords->nPh; i++) {
+                for (GlobalOrd j = 0; j < _coords->nPh; j++) {
                     poleCoefficient +=
-                        (sigThTh[ringStart + i] + sigThTh[pole]) / 2;
+                        (sigThTh[ringStart + j] + sigThTh[pole]) / 2;
                 }
                 poleCoefficient *= -sin(theta0) * _coords->dPh / _coords->dTh;
 
@@ -267,12 +266,12 @@ MatrixRCP TlSolver::_buildGrid(MultiVectorRCP coefficients) {
 
                 // Handle the contributions from the surrounding ring
 
-                for (GlobalOrd i = 0; i < _coords->nPh; i++) {
+                for (GlobalOrd j = 0; j < _coords->nPh; j++) {
                     Scalar sigThThAvg =
-                        (sigThTh[ringStart + i] + sigThTh[pole]) / 2;
+                        (sigThTh[ringStart + j] + sigThTh[pole]) / 2;
 
-                    GlobalOrd prevIdx = (i - 1 + _coords->nPh) % _coords->nPh;
-                    GlobalOrd nextIdx = (i + 1) % _coords->nPh;
+                    GlobalOrd prevIdx = (j - 1 + _coords->nPh) % _coords->nPh;
+                    GlobalOrd nextIdx = (j + 1) % _coords->nPh;
                     Scalar sigThPhAvg = (sigThPh[ringStart + prevIdx] -
                                          sigThPh[ringStart + nextIdx]) /
                                         8;
@@ -284,7 +283,7 @@ MatrixRCP TlSolver::_buildGrid(MultiVectorRCP coefficients) {
                         multiplier * sigThPhAvg;
 
                     GlobalOrd ringTheta = (theta == 0) ? 1 : (_coords->nTh - 2);
-                    GlobalOrd ringGlobIdx = i * _coords->nTh + ringTheta;
+                    GlobalOrd ringGlobIdx = j * _coords->nTh + ringTheta;
 
                     matrixIdcs.push_back(ringGlobIdx);
                     vals.push_back(ringPointCoeff);

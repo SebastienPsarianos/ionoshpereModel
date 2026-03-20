@@ -28,12 +28,14 @@ int main(int argc, char* argv[]) {
     auto comm = Tpetra::getDefaultComm();
 
     /*** BEGIN PARAMETER PARSING ***/
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <input_file>" << std::endl;
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " <input_file> <output_file>"
+                  << std::endl;
         return -1;
     }
 
-    std::string inputFile = argv[2];
+    std::string inputFile = argv[1];
+    std::string outputFile = argv[2];
     /*** END PARAMETER PARSING ***/
 
     int nTh = -1;
@@ -71,9 +73,9 @@ int main(int argc, char* argv[]) {
     /*** END POTENTIAL SOLVE ***/
 
     /*** BEGIN PLOTTING ***/
-    exportToTecplot("data/solvedPotential.dat", coords, result, sourceTerm,
-                    auroralConductance, euvConductance, conductance, comm,
-                    coords->nTh, coords->nPh);
+    exportToTecplot(outputFile, coords, result, sourceTerm, auroralConductance,
+                    euvConductance, conductance, comm, coords->nTh,
+                    coords->nPh);
 
     return 0;
     /*** END PLOTTING ***/
