@@ -4,7 +4,7 @@
 
 using namespace Ionosphere;
 
-SolarModel::SolarModel(int year, int month, int day, int hour) {
+SolarModel::SolarModel(int year, int month, int day, double hour) {
     // "Correcting" the month (Grena paper)
     if (month <= 2) {
         month += 12;

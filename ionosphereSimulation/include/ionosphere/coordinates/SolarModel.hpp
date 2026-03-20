@@ -6,7 +6,7 @@
 
 class SolarModel {
   public:
-    SolarModel(int year, int month, int day, int hour);
+    SolarModel(int year, int month, int day, double hour);
     double computeZenith(Ionosphere::GeoGeo coords) const;
     Ionosphere::GeoGeo computeSubSolar() const;
 

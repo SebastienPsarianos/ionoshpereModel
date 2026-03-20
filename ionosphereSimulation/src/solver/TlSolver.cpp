@@ -37,6 +37,7 @@ VectorRCP TlSolver::calculatePotential() {
     Teuchos::RCP<precType> prec = factory.create<Matrix>("ILUT", A);
 
     // TODO: Do some more preconditioner and solver optimization
+    //  - Look into zoltan for map generation
     Teuchos::ParameterList precParams;
     precParams.set("fact: ilut level-of-fill", 2.0);
     precParams.set("fact: drop tolerance", 1e-4);

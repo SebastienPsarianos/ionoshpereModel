@@ -1,5 +1,7 @@
 #pragma once
 #include "ionosphere/TrilinosAliases.hpp"
+#include "ionosphere/conductance/EuvConductance.hpp"
+#include "ionosphere/conductance/HardyConductance.hpp"
 #include "ionosphere/coordinates/Coordinates.hpp"
 
 #include <Teuchos_RCP.hpp>
@@ -16,20 +18,15 @@ class EmpConductance {
     computeConductance(int kp, double f107);
 
   private:
-    void _computeAuroralConductance(int kp);
-    void _computeEuvConductance(double f107);
-    void _computeHppConductance();
-    void _readAndSyncJson(Ionosphere::CommRCP comm);
+    Ionosphere::MultiVectorRCP
+    _computeHppConductance(Ionosphere::MultiVectorRCP auroralConductance,
+                           Ionosphere::MultiVectorRCP euvConductance);
 
     Ionosphere::MapRCP _map;
-    Ionosphere::MultiVectorRCP _sigma;
-    Ionosphere::MultiVectorRCP _euvConductance;
-    Ionosphere::MultiVectorRCP _auroralConductance;
-    Ionosphere::MultiVectorRCP _conductance;
+    Teuchos::RCP<Coordinates> _coords;
 
-    nlohmann::json _coefficientJson;
+    HardyConductance hardyConductanceModel;
+    EuvConductance euvConductanceModel;
 
     double _sig0;
-
-    Teuchos::RCP<Coordinates> _coords;
 };
