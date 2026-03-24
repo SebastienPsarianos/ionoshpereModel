@@ -12,7 +12,7 @@ class HardyConductance {
 
   private:
     void _readAndSyncJson(Ionosphere::CommRCP comm);
-    double _fourierSeries(nlohmann::json coefficients, double mlt);
+    double _fourierSeries(const nlohmann::json& coefficients, double mlt);
     double _epsteinFunction(double h, double r, double h0, double S1,
                             double S2);
 

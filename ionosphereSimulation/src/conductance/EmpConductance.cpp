@@ -1,4 +1,5 @@
 #include "ionosphere/conductance/EmpConductance.hpp"
+#include "Teuchos_ParameterList.hpp"
 #include "ionosphere/TrilinosAliases.hpp"
 #include "ionosphere/conductance/EuvConductance.hpp"
 #include "ionosphere/conductance/HardyConductance.hpp"
@@ -10,16 +11,18 @@ using namespace Ionosphere;
 using nlohmann::json;
 
 EmpConductance::EmpConductance(Teuchos::RCP<Coordinates> coords, MapRCP map,
-                               Scalar sig0)
+                               const Teuchos::ParameterList& conductanceParams)
     : _map(map), _coords(coords), hardyConductanceModel(coords, map),
-      euvConductanceModel(coords, map), _sig0(sig0) {}
+      euvConductanceModel(coords, map), _kp(conductanceParams.get<int>("kp")),
+      _f107(conductanceParams.get<double>("f107")),
+      _sig0(conductanceParams.get<double>("sig0")) {}
 
 std::tuple<MultiVectorRCP, MultiVectorRCP, MultiVectorRCP>
-EmpConductance::computeConductance(int kp, double f107) {
+EmpConductance::computeConductance() {
     MultiVectorRCP auroralConductance =
-        hardyConductanceModel.computeAuroralConductance(kp);
+        hardyConductanceModel.computeAuroralConductance(_kp);
     MultiVectorRCP euvConductance =
-        euvConductanceModel.computeEuvConductance(f107);
+        euvConductanceModel.computeEuvConductance(_f107);
     MultiVectorRCP conductance =
         _computeHppConductance(auroralConductance, euvConductance);
 
@@ -48,8 +51,6 @@ EmpConductance::_computeHppConductance(MultiVectorRCP auroralConductance,
         hppPedersonConductance[i] =
             sqrt(pedersonConductancesAur[i] * pedersonConductancesAur[i] +
                  pedersonConductancesEuv[i] * pedersonConductancesEuv[i]);
-
-        hppParallelConductance[i] = _sig0;
 
         // Imposing a minimum background conductance of 0.25 mhos
         hppPedersonConductance[i] = std::max(hppPedersonConductance[i], 0.25);

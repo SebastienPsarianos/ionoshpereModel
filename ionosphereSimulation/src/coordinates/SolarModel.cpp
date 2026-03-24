@@ -1,10 +1,17 @@
 #include "ionosphere/coordinates/SolarModel.hpp"
+#include "Teuchos_ParameterList.hpp"
 
 #include <cmath>
 
 using namespace Ionosphere;
 
-SolarModel::SolarModel(int year, int month, int day, double hour) {
+SolarModel::SolarModel(const Teuchos::ParameterList& conductanceParams) {
+
+    int year = conductanceParams.get<int>("year");
+    int month = conductanceParams.get<int>("month");
+    int day = conductanceParams.get<int>("day");
+    double hour = conductanceParams.get<double>("hour");
+
     // "Correcting" the month (Grena paper)
     if (month <= 2) {
         month += 12;

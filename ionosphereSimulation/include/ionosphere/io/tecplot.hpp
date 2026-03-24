@@ -1,5 +1,8 @@
+#pragma once
+
 #include <cmath>
 
+#include "Teuchos_ParameterList.hpp"
 #include "ionosphere/TrilinosAliases.hpp"
 #include "ionosphere/coordinates/Coordinates.hpp"
 
@@ -10,8 +13,11 @@
 #include <Tpetra_Vector_decl.hpp>
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 
-inline void exportToTecplot(const std::string& filename,
+// TODO: move this to a cpp file
+namespace Ionosphere {
+inline void exportToTecplot(const Teuchos::ParameterList& ioParams,
                             Teuchos::RCP<Coordinates> coordWrapper,
                             Ionosphere::VectorRCP potential,
                             Ionosphere::VectorRCP sourceTerm,
@@ -20,6 +26,8 @@ inline void exportToTecplot(const std::string& filename,
                             Ionosphere::MultiVectorRCP conductance,
                             Teuchos::RCP<const Teuchos::Comm<int>> comm,
                             int nTh, int nPh) {
+
+    std::string filename = ioParams.get<std::string>("output");
 
     // 1. Create a root map where Rank 0 owns all the elements
     long long globalElements = nTh * nPh;
@@ -129,3 +137,4 @@ inline void exportToTecplot(const std::string& filename,
                   << std::endl;
     }
 }
+} // namespace Ionosphere

@@ -1,4 +1,5 @@
-#include "ionosphere/utils/LegacyMHDConversion.hpp"
+#include "ionosphere/mhd/MHDInterpolation.hpp"
+#include "Teuchos_ParameterList.hpp"
 #include "ionosphere/TrilinosAliases.hpp"
 #include "ionosphere/coordinates/Coordinates.hpp"
 
@@ -7,17 +8,17 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 
 using namespace Ionosphere;
 using Teuchos::rcp;
 using Teuchos::RCP;
 
-void LegacyMHDConversion::processLegacyOutput(RCP<Coordinates>& coordinates,
-                                              RCP<DipoleModel> dipoleModel,
-                                              RCP<SolarModel> solarModel,
-                                              VectorRCP& sourceTerm, MapRCP map,
-                                              CommRCP comm, int nTh, int nPh,
-                                              const std::string& filename) {
+void MHDInterpolation::processLegacyOutput(
+    RCP<Coordinates>& coordinates, RCP<DipoleModel> dipoleModel,
+    RCP<SolarModel> solarModel, VectorRCP& sourceTerm, MapRCP map, CommRCP comm,
+    int nTh, int nPh, const Teuchos::ParameterList& ioParams) {
+
     // Create root map so we only hit the file once
     auto rootMap = Teuchos::rcp(new Tpetra::Map<int, long long>(
         nTh * nPh, (comm->getRank() == 0 ? nTh * nPh : 0), 0, comm));
@@ -36,7 +37,7 @@ void LegacyMHDConversion::processLegacyOutput(RCP<Coordinates>& coordinates,
     double dPh = 0.0;
 
     if (comm->getRank() == 0) {
-        std::fstream jrData = std::fstream(filename);
+        std::fstream jrData = std::fstream(ioParams.get<std::string>("input"));
         if (!jrData.is_open()) {
             throw std::runtime_error("Failed opening radial current data");
         }
@@ -73,18 +74,22 @@ void LegacyMHDConversion::processLegacyOutput(RCP<Coordinates>& coordinates,
     coordinates = rcp(new Coordinates(coordVector, dipoleModel, solarModel, nTh,
                                       nPh, dTh, dPh));
 }
-void LegacyMHDConversion::getGridSize(
-    std::string filename, int* nTh, int* nPh,
+
+void MHDInterpolation::getGridSize(
+    const Teuchos::ParameterList& ioParams, int* nTh, int* nPh,
     Teuchos::RCP<const Teuchos::Comm<int>> comm) {
     if (comm->getRank() == 0) {
-        std::fstream dataFile = std::fstream(filename);
+        std::fstream dataFile =
+            std::fstream(ioParams.get<std::string>("input"));
         if (!dataFile.is_open()) {
             throw std::runtime_error("Failed opening radial current data");
         }
 
         std::string line;
         if (std::getline(dataFile, line)) {
-            std::sscanf(line.c_str(), "nTh: %d, nPh: %d", nTh, nPh);
+            if (std::sscanf(line.c_str(), "nTh: %d, nPh: %d", nTh, nPh) != 2) {
+                throw std::runtime_error("Failed to parse grid dimensions");
+            }
         }
 
         std::cout << *nTh << " " << *nPh << std::endl;

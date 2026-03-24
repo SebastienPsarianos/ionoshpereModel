@@ -1,4 +1,5 @@
 #include "ionosphere/coordinates/DipoleModel.hpp"
+#include "Teuchos_ParameterList.hpp"
 #include "nlohmann/json"
 
 #include <cmath>
@@ -6,12 +7,17 @@
 
 using namespace Ionosphere;
 
-DipoleModel::DipoleModel(CommRCP comm, int year, int month, int day,
-                         double hour) {
+DipoleModel::DipoleModel(CommRCP comm,
+                         const Teuchos::ParameterList& conductanceParams) {
     using Eigen::Vector3d;
     using nlohmann::json;
     using std::string;
     using std::to_string;
+
+    int year = conductanceParams.get<int>("year");
+    int month = conductanceParams.get<int>("month");
+    int day = conductanceParams.get<int>("day");
+    double hour = conductanceParams.get<double>("hour");
 
     const int myRank = comm->getRank();
     const int rootRank = 0;
@@ -50,7 +56,6 @@ DipoleModel::DipoleModel(CommRCP comm, int year, int month, int day,
     double fractionalYear = static_cast<double>(year) +
                             static_cast<double>(month - 1) / 12.0 +
                             static_cast<double>(day) / 365.0 + hour / 8760.0;
-    ;
 
     int epoch = year - year % 5;
     string epochString = to_string(epoch);

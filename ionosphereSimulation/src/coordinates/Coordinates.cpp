@@ -27,22 +27,22 @@ MagGeo Coordinates::localIdx2MagGeo(LocalOrd i) const {
 
 GeoSph Coordinates::localIdx2GeoSph(LocalOrd i) const {
     return _dipoleModel->dipoleToGeoCentric(localIdx2MagSph(i));
-};
+}
 
 GeoGeo Coordinates::localIdx2GeoGeo(LocalOrd i) const {
     return toGeoGeo(_dipoleModel->dipoleToGeoCentric(localIdx2MagSph(i)));
-};
+}
 
 double Coordinates::localIdx2Sza(LocalOrd i) const {
     return _solarModel->computeZenith(localIdx2GeoGeo(i));
-};
+}
 
 double Coordinates::localIdx2Mlt(LocalOrd i) const {
     double mlt = (localIdx2MagGeo(i).longitude - _subsolarPoint.longitude) *
                      (12 / M_PI) +
                  12.0;
     return std::fmod(mlt + 24.0, 24.0);
-};
+}
 
 double Coordinates::getMlt(MagGeo geo) {
     double mlt =
@@ -52,11 +52,11 @@ double Coordinates::getMlt(MagGeo geo) {
 
 GlobalOrd Coordinates::thPh2GlobalIdx(GlobalOrd thId, GlobalOrd phId) const {
     return thId + phId * nTh;
-};
+}
 
 std::pair<GlobalOrd, GlobalOrd>
 Coordinates::globalIdx2ThetaPhi(GlobalOrd globalIdx) const {
     return {globalIdx % nTh, globalIdx / nTh};
-};
+}
 
 Ionosphere::MultiVectorRCP Coordinates::multiVector() const { return _coords; }

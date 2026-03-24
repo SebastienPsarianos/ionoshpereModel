@@ -1,12 +1,13 @@
 #pragma once
 
+#include "Teuchos_ParameterList.hpp"
 #define SUNFREQ .0172019715
 
 #include "ionosphere/coordinates/CoordinateTypes.hpp"
 
 class SolarModel {
   public:
-    SolarModel(int year, int month, int day, double hour);
+    SolarModel(const Teuchos::ParameterList& conductanceParams);
     double computeZenith(Ionosphere::GeoGeo coords) const;
     Ionosphere::GeoGeo computeSubSolar() const;
 

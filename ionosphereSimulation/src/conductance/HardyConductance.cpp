@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <fstream>
+#include <iostream>
 #include <nlohmann/json>
 #include <string>
 
@@ -119,7 +120,7 @@ MultiVectorRCP HardyConductance::computeAuroralConductance(int kp) {
     return _auroralConductance;
 }
 
-double HardyConductance::_fourierSeries(nlohmann::json coefficients,
+double HardyConductance::_fourierSeries(const nlohmann::json& coefficients,
                                         double mlt) {
     using std::cos, std::sin;
     double coefficient = coefficients["const"].get<double>();

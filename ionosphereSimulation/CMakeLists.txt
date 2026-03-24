@@ -27,17 +27,22 @@ find_package(Trilinos REQUIRED)
 #  Build Exec
 add_executable(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PRIVATE
-    src/main.cpp
-    src/coordinates/Coordinates.cpp
-    src/coordinates/SolarModel.cpp
-    src/coordinates/DipoleModel.cpp
-    src/coordinates/CoordinateTypes.cpp
-    src/conductance/EmpConductance.cpp
-    src/conductance/HardyConductance.cpp
-    src/conductance/EuvConductance.cpp
-    src/TrilinosAliases.cpp
-    src/utils/LegacyMHDConversion.cpp
-    src/solver/TlSolver.cpp
+      src/main.cpp
+      src/TrilinosAliases.cpp
+      src/coordinates/Coordinates.cpp
+      src/coordinates/CoordinateTypes.cpp
+      src/coordinates/SolarModel.cpp
+      src/coordinates/DipoleModel.cpp
+      src/conductance/EmpConductance.cpp
+      src/conductance/HardyConductance.cpp
+      src/conductance/EuvConductance.cpp
+      src/mhd/MHDInterpolation.cpp
+      src/solver/TlSolver.cpp
+      src/solver/GhostRingBC.cpp
+      src/solver/OAmmEqn.cpp
+      src/solver/PoleDivThmBC.cpp
+      src/solver/Problem.cpp
+      src/solver/ProblemFactory.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE 

@@ -1,4 +1,5 @@
 #pragma once
+#include "Teuchos_ParameterList.hpp"
 #include "ionosphere/TrilinosAliases.hpp"
 #include "ionosphere/conductance/EuvConductance.hpp"
 #include "ionosphere/conductance/HardyConductance.hpp"
@@ -11,11 +12,11 @@ class EmpConductance {
 
   public:
     EmpConductance(Teuchos::RCP<Coordinates> coords, Ionosphere::MapRCP map,
-                   Ionosphere::Scalar sig0);
+                   const Teuchos::ParameterList& conductanceParams);
 
     std::tuple<Ionosphere::MultiVectorRCP, Ionosphere::MultiVectorRCP,
                Ionosphere::MultiVectorRCP>
-    computeConductance(int kp, double f107);
+    computeConductance();
 
   private:
     Ionosphere::MultiVectorRCP
@@ -28,5 +29,7 @@ class EmpConductance {
     HardyConductance hardyConductanceModel;
     EuvConductance euvConductanceModel;
 
+    int _kp;
+    double _f107;
     double _sig0;
 };
