@@ -1,10 +1,11 @@
+#pragma once
+
 #include "ionosphere/TrilinosAliases.hpp"
 #include "ionosphere/coordinates/Coordinates.hpp"
 
 #include <Teuchos_RCPDecl.hpp>
-#include <string>
 
-class LegacyMHDConversion {
+class MHDInterpolation {
   public:
     static void processLegacyOutput(Teuchos::RCP<Coordinates>& coordinates,
                                     Teuchos::RCP<DipoleModel> dipoleModel,
@@ -12,7 +13,8 @@ class LegacyMHDConversion {
                                     Ionosphere::VectorRCP& sourceTerm,
                                     Ionosphere::MapRCP map,
                                     Ionosphere::CommRCP comm, int nTh, int nPh,
-                                    const std::string& filename);
-    static void getGridSize(std::string filename, int* nTh, int* nPh,
-                            Ionosphere::CommRCP comm);
+                                    const Teuchos::ParameterList& ioParams);
+
+    static void getGridSize(const Teuchos::ParameterList& ioParams, int* nTh,
+                            int* nPh, Ionosphere::CommRCP comm);
 };

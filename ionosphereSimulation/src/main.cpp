@@ -1,84 +1,83 @@
 #include "ionosphere/TrilinosAliases.hpp"
 #include "ionosphere/conductance/EmpConductance.hpp"
 #include "ionosphere/coordinates/Coordinates.hpp"
+#include "ionosphere/io/tecplot.hpp"
+#include "ionosphere/mhd/MHDInterpolation.hpp"
+#include "ionosphere/solver/Problem.hpp"
+#include "ionosphere/solver/ProblemFactory.hpp"
 #include "ionosphere/solver/TlSolver.hpp"
-#include "ionosphere/tecplot.hpp"
-#include "ionosphere/utils/LegacyMHDConversion.hpp"
+
+#include <Teuchos_ParameterList.hpp>
+#include <Teuchos_YAML.hpp>
+#include <Teuchos_YamlParameterListHelpers.hpp>
 #include <Tpetra_Core.hpp>
-#include <iostream>
 #include <stdexcept>
 
-Ionosphere::Scalar SIG0 = 1000;
-Ionosphere::Scalar THETA0 = 0.05;
-
-int YEAR = 2026;
-int MONTH = 2;
-int DAY = 5;
-double HOUR = 5;
-
-int KP = 6;
-int F107 = 120;
-
 int main(int argc, char* argv[]) {
-    using namespace Ionosphere;
-    using Teuchos::rcp;
-    using Teuchos::RCP;
 
     Tpetra::ScopeGuard tpetraScope(&argc, &argv);
     auto comm = Tpetra::getDefaultComm();
 
-    /*** BEGIN PARAMETER PARSING ***/
-    if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " <input_file> <output_file>"
-                  << std::endl;
-        return -1;
-    }
+    /** START PARAMETER PARSING **/
 
-    std::string inputFile = argv[1];
-    std::string outputFile = argv[2];
+    Teuchos::ParameterList paramList;
+    Teuchos::updateParametersFromYamlFileAndBroadcast(
+        "configuration.yaml", Teuchos::Ptr<Teuchos::ParameterList>(&paramList),
+        *comm);
+
+    auto conductanceParams = paramList.sublist("conductance");
+    auto ioParams = paramList.sublist("io");
+    auto equationParams = paramList.sublist("equation");
+    auto solverParams = paramList.sublist("solver");
+
     /*** END PARAMETER PARSING ***/
 
+    /*** BEGIN MHD INTERPOLATION ***/
     int nTh = -1;
     int nPh = -1;
 
-    LegacyMHDConversion::getGridSize(inputFile, &nTh, &nPh, comm);
+    MHDInterpolation::getGridSize(ioParams, &nTh, &nPh, comm);
     if (nTh <= 0 || nPh <= 0) {
         throw std::runtime_error(
             "Error reading source term data, ending execution");
     }
 
-    auto map = rcp(new Map(nTh * nPh, 0, comm));
+    auto map = Teuchos::rcp(new Ionosphere::Map(nTh * nPh, 0, comm));
 
-    /*** BEGIN MHD INTERPOLATION ***/
-    auto sourceTerm = rcp(new Vector(map));
-    RCP<Coordinates> coords;
-    RCP<SolarModel> solarModel =
-        rcp<SolarModel>(new SolarModel(YEAR, DAY, MONTH, HOUR));
-    RCP<DipoleModel> dipoleModel =
-        rcp<DipoleModel>(new DipoleModel(comm, YEAR, DAY, MONTH, HOUR));
+    auto sourceTerm = Teuchos::rcp(new Ionosphere::Vector(map));
 
-    LegacyMHDConversion::processLegacyOutput(coords, dipoleModel, solarModel,
-                                             sourceTerm, map, comm, nTh, nPh,
-                                             inputFile);
+    Teuchos::RCP<Coordinates> coords;
+
+    auto solarModel =
+        Teuchos::rcp<SolarModel>(new SolarModel(conductanceParams));
+
+    auto dipoleModel =
+        Teuchos::rcp<DipoleModel>(new DipoleModel(comm, conductanceParams));
+
+    MHDInterpolation::processLegacyOutput(coords, dipoleModel, solarModel,
+                                          sourceTerm, map, comm, nTh, nPh,
+                                          ioParams);
     /*** END MHD INTERPOLATION ***/
 
-    /*** BEGIN CONDUCTANCE CALC***/
+    /*** BEGIN CONDUCTANCE CALC ***/
     auto [auroralConductance, euvConductance, conductance] =
-        EmpConductance(coords, map, SIG0).computeConductance(KP, F107);
+        EmpConductance(coords, map, conductanceParams).computeConductance();
     /*** END CONDUCTANCE CALC ***/
 
     /*** BEGIN POTENTIAL SOLVE ***/
-    TlSolver solver(coords, conductance, sourceTerm, map);
-    VectorRCP result = solver.calculatePotential();
+    Teuchos::RCP<Problem> problem = Ionosphere::problemFactory(
+        equationParams, coords, sourceTerm, conductance, map);
+
+    Ionosphere::VectorRCP result = Ionosphere::calculatePotential(problem);
     /*** END POTENTIAL SOLVE ***/
 
     /*** BEGIN PLOTTING ***/
-    exportToTecplot(outputFile, coords, result, sourceTerm, auroralConductance,
-                    euvConductance, conductance, comm, coords->nTh,
-                    coords->nPh);
+    Ionosphere::exportToTecplot(ioParams, coords, result, sourceTerm,
+                                auroralConductance, euvConductance, conductance,
+                                comm, coords->nTh, coords->nPh);
+    /*** END PLOTTING ***/
 
     return 0;
-    /*** END PLOTTING ***/
 
     // TODO: Proper post-processing, including J and others
 }
