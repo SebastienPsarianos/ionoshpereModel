@@ -108,29 +108,40 @@ inline void exportToTecplot(const Teuchos::ParameterList& ioParams,
                    "\"Sigma_P_EUV\", \"Sigma_H_EUV\", \"Sigma_0_EUV\", \"MLT\""
                    "\n";
         // Zone definition: I is the fastest varying index (theta), J is the
-        // slower (phi)
-        outFile << "ZONE I=" << nTh << ", J=" << nPh << ", DATAPACKING=POINT\n";
+        // slower (phi). We write nPh+1 J-rows: nPh solver rows plus a closing
+        // row that repeats ph=0, so Tecplot sees a closed surface with no gap
+        // at the phi=0/2pi seam. The solver grid is unaffected.
+        outFile << "ZONE I=" << nTh << ", J=" << nPh + 1
+                << ", DATAPACKING=POINT\n";
 
         // --- Data Writing ---
         outFile << std::scientific << std::setprecision(6);
 
-        for (int ph = 0; ph < nPh; ph++) {
+        auto writeRow = [&](int ph_src) {
             for (int th = 0; th < nTh; th++) {
-                long long id = ph * nTh + th;
+                long long id = ph_src * nTh + th;
                 double th_ = thVals[id], ph_ = phVals[id];
                 double x = std::sin(th_) * std::cos(ph_);
                 double y = std::sin(th_) * std::sin(ph_);
                 double z = std::cos(th_);
-                outFile << x << " " << y << " " << z << " " << th_ << " " << ph_
-                        << " " << potVals[id] << " " << jrVals[id] << " "
-                        << pedersonVals[id] << " " << hallVals[id] << " "
-                        << parallelVals[id] << " " << auroralpedersonVals[id]
-                        << " " << auroralhallVals[id] << " "
-                        << auroralparallelVals[id] << " " << euvpedersonVals[id]
-                        << " " << euvhallVals[id] << " " << euvparallelVals[id]
-                        << " " << mltVals[id] << "\n";
+                outFile << x << " " << y << " " << z << " " << th_ << " "
+                        << ph_ << " " << potVals[id] << " " << jrVals[id]
+                        << " " << pedersonVals[id] << " " << hallVals[id]
+                        << " " << parallelVals[id] << " "
+                        << auroralpedersonVals[id] << " "
+                        << auroralhallVals[id] << " "
+                        << auroralparallelVals[id] << " "
+                        << euvpedersonVals[id] << " " << euvhallVals[id]
+                        << " " << euvparallelVals[id] << " " << mltVals[id]
+                        << "\n";
             }
-        }
+        };
+
+        for (int ph = 0; ph < nPh; ph++)
+            writeRow(ph);
+
+        // Closing row: repeat ph=0 to connect the phi=2pi seam in Tecplot
+        writeRow(0);
 
         outFile.close();
         std::cout << "Successfully exported Tecplot data to: " << filename

@@ -57,7 +57,7 @@ void PoleDivThmBC::_applyToMatrix(Ionosphere::MatrixRCP matrix) {
         GlobalOrd primaryPoleId = (theta == 0) ? 0 : (_coords->nTh - 1);
 
         // Applying the polar cap flux boundary condition (see notes)
-        if (theta == 0 || theta == _coords->nTh - 1) {
+        if (_coords->isPole(gridPoint)) {
             if (phi == 0) {
                 Scalar theta0 = _coords->dTh / 2;
 
@@ -95,7 +95,6 @@ void PoleDivThmBC::_applyToMatrix(Ionosphere::MatrixRCP matrix) {
                                         8;
 
                     Scalar ringPointCoeff =
-
                         (_coords->dPh * sin(theta0) / _coords->dTh) *
                             sigThThAvg +
                         multiplier * sigThPhAvg;
@@ -130,12 +129,11 @@ void PoleDivThmBC::_applyToRHS(VectorRCP rhs) {
         for (LocalOrd i = 0; i < static_cast<LocalOrd>(myGridPoints.size());
              i++) {
             GlobalOrd currentGid = myGridPoints[i];
-            GlobalOrd theta = currentGid % _coords->nTh;
             GlobalOrd phi = currentGid / _coords->nTh;
 
             if (currentGid == pinPoint) {
                 rhsData[i] = 0.0;
-            } else if (theta == 0 || theta == _coords->nTh - 1) {
+            } else if (_coords->isPole(currentGid)) {
                 // We set the two primary pole points to the cap condition
                 if (phi == 0) {
                     Scalar theta0 = _coords->dTh / 2.0;

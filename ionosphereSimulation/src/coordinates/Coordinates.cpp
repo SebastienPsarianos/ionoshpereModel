@@ -59,4 +59,19 @@ Coordinates::globalIdx2ThetaPhi(GlobalOrd globalIdx) const {
     return {globalIdx % nTh, globalIdx / nTh};
 }
 
+Coordinates::Neighbors Coordinates::getNeighbors(GlobalOrd globalIdx) const {
+    auto [theta, phi] = globalIdx2ThetaPhi(globalIdx);
+    return {
+        .up = globalIdx - 1,
+        .down = globalIdx + 1,
+        .left = (phi == 0) ? theta + (nPh - 1) * nTh : globalIdx - nTh,
+        .right = (phi == nPh - 1) ? theta : globalIdx + nTh,
+    };
+}
+
+bool Coordinates::isPole(GlobalOrd globalIdx) const {
+    GlobalOrd theta = globalIdx % nTh;
+    return theta == 0 || theta == nTh - 1;
+}
+
 Ionosphere::MultiVectorRCP Coordinates::multiVector() const { return _coords; }

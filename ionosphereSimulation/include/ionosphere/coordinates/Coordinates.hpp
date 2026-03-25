@@ -27,6 +27,13 @@ class Coordinates {
     std::pair<Ionosphere::GlobalOrd, Ionosphere::GlobalOrd>
     globalIdx2ThetaPhi(Ionosphere::GlobalOrd globalIdx) const;
 
+    // Grid neighbor with the phi wrap-around.
+    struct Neighbors {
+        Ionosphere::GlobalOrd up, down, left, right;
+    };
+    Neighbors getNeighbors(Ionosphere::GlobalOrd globalIdx) const;
+    bool isPole(Ionosphere::GlobalOrd globalIdx) const;
+
     // Exposes underlying coordinates
     Ionosphere::MultiVectorRCP multiVector() const;
 
