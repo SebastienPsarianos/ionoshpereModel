@@ -45,6 +45,7 @@ MatrixRCP OAmmEqn::assembleMatrix() {
         Teuchos::Array<GlobalOrd> matrixIdcs;
         Teuchos::Array<Scalar> vals;
 
+        // TODO: Figure out if this should be here or in the boundary condition
         // Pin the gauge point on the equator and then skip
         if (theta == _coords->nTh / 2 && phi == 0) {
             matrixIdcs.push_back(gridPoint);
@@ -53,24 +54,14 @@ MatrixRCP OAmmEqn::assembleMatrix() {
             continue;
         }
 
-        // Applying the polar cap flux boundary condition (see notes)
-        if (theta != 0 && theta != _coords->nTh - 1) {
+        // Interior points only — poles are handled by the boundary condition
+        if (!_coords->isPole(gridPoint)) {
+            auto [up, down, left, right] = _coords->getNeighbors(gridPoint);
+
             matrixIdcs.push_back(gridPoint);
             vals.push_back(
                 -2 * ththCoefficients[i] / (_coords->dTh * _coords->dTh) -
                 2 * phphCoefficients[i] / (_coords->dPh * _coords->dPh));
-
-            GlobalOrd left = gridPoint - _coords->nTh;
-            GlobalOrd right = gridPoint + _coords->nTh;
-
-            GlobalOrd up = gridPoint - 1;
-            GlobalOrd down = gridPoint + 1;
-
-            if (phi == 0) {
-                left = theta + (_coords->nPh - 1) * _coords->nTh;
-            } else if (phi == _coords->nPh - 1) {
-                right = theta;
-            }
 
             // Up
             matrixIdcs.push_back(up);
@@ -100,7 +91,6 @@ MatrixRCP OAmmEqn::assembleMatrix() {
 }
 
 VectorRCP OAmmEqn::assembleRHS() {
-
     auto rhs = Teuchos::rcp(new Vector(*_radCurrent, Teuchos::Copy));
     rhs->scale(_radiusIonosphere2);
 
@@ -129,21 +119,15 @@ MultiVectorRCP OAmmEqn::_calculateCoefficients() {
         Teuchos::Array<GlobalOrd> matrixIdcs_ph;
         Teuchos::Array<Scalar> vals_ph;
 
-        GlobalOrd left = currentGid - _coords->nTh;
-        GlobalOrd right = currentGid + _coords->nTh;
-        GlobalOrd up = currentGid - 1;
-        GlobalOrd down = currentGid + 1;
+        auto [up, down, left, right] = _coords->getNeighbors(currentGid);
 
-        if (phi == 0) {
-            left = theta + (_coords->nPh - 1) * _coords->nTh;
-        } else if (phi == _coords->nPh - 1) {
-            right = theta;
-        }
-
-        if (theta == 0 || theta == _coords->nTh - 1) {
+        if (_coords->isPole(currentGid)) {
             matrixIdcs_th.push_back(currentGid);
             vals_th.push_back(0.0);
         } else if (theta == 1) {
+            // TODO: These one sided stencils should be moved to the boundary
+            // condition
+
             // One sided stencil for north pole (second order)
             GlobalOrd pt1 = phi * _coords->nTh + 1;
             GlobalOrd pt2 = phi * _coords->nTh + 2;
@@ -155,6 +139,7 @@ MultiVectorRCP OAmmEqn::_calculateCoefficients() {
             matrixIdcs_th.push_back(pt3);
             vals_th.push_back(-1.0 / (2.0 * _coords->dTh));
         } else if (theta == _coords->nTh - 2) {
+
             // One sided stencil for south pole (second order)
             GlobalOrd pt1 = phi * _coords->nTh + theta;
             GlobalOrd pt2 = phi * _coords->nTh + theta - 1;
@@ -173,7 +158,7 @@ MultiVectorRCP OAmmEqn::_calculateCoefficients() {
             vals_th.push_back(-1.0 / (2.0 * _coords->dTh));
         }
 
-        if (theta == 0 || theta == _coords->nTh - 1) {
+        if (_coords->isPole(currentGid)) {
             matrixIdcs_ph.push_back(currentGid);
             vals_ph.push_back(0.0);
         } else {
@@ -207,9 +192,8 @@ MultiVectorRCP OAmmEqn::_calculateCoefficients() {
     auto parallelVals = _conductance->getDataNonConst(2);
 
     for (LocalOrd i = 0; i < static_cast<LocalOrd>(thVals.size()); i++) {
-        GlobalOrd thetaGlobal = myGridPointsGlobal[i] % _coords->nTh;
 
-        if (thetaGlobal == 0 || thetaGlobal == _coords->nTh - 1) {
+        if (_coords->isPole(myGridPointsGlobal[i])) {
             thd1[i] = 0.0;
             thd2[i] = 0.0;
             phd1[i] = 0.0;

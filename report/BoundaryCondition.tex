@@ -1,0 +1,141 @@
+\documentclass[11pt]{article}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{standalone}
+
+\definecolor{capfill}{RGB}{200,225,240}
+\definecolor{capedge}{RGB}{70,130,180}
+\definecolor{polecol}{RGB}{204,51,51}
+\definecolor{adjcol}{RGB}{230,120,50}
+\definecolor{gridcol}{RGB}{50,50,80}
+\definecolor{ringcol}{RGB}{140,140,160}
+\definecolor{loncol}{RGB}{170,170,190}
+\definecolor{annotcol}{RGB}{80,80,80}
+\definecolor{stencilA}{RGB}{0,150,130}    
+\definecolor{stencilB}{RGB}{130,50,180}    
+
+% Margins
+\topmargin=-0.45in
+\evensidemargin=0in
+\oddsidemargin=0in
+\textwidth=6.5in
+\textheight=9.0in
+\headsep=0.25in
+
+\title{ Title}
+\author{ Author }
+\date{\today}
+
+\begin{document}
+
+
+\section{Derivation for the continuity equation}
+The continuity equation derived in Goodmans paper describes the potential systems on the surface of the ionosphere. It is given as:
+\begin{equation}
+	j_R(R_E) = \left[\nabla_\perp \cdot (\Sigma \cdot \nabla\psi)_\perp\right]
+	\label{eqn:continuity_eqn}
+\end{equation}
+Where:
+\begin{itemize}
+	\item $R_E$ is the radius of the earth
+	\item $j_R$ represents the component of the current density that is radial to the surface of the ionosphere.
+	\item $\Sigma$ represents the height integrated conductivity tensor for the 2D ionosphere approximation.
+	\item $\psi$ is the potential along the ionosphere.
+\end{itemize}
+In O.Amm, the conductivity tensor is given in spherical coordinates as:
+\begin{equation}
+	\Sigma_{Amm} = \begin{pmatrix}
+		0 & 0                      & 0                   \\
+		0 & \Sigma_{\theta \theta} & \Sigma_{\theta\phi} \\
+		0 & \Sigma_{\phi \theta}   & \Sigma_{\phi\phi}   \\
+	\end{pmatrix} =
+	\begin{pmatrix}
+		0 & 0                                          & 0                                                \\
+		0 & \frac{\Sigma_0\Sigma_P}{C}                 & \frac{\Sigma_0\Sigma_H (-\cos\varepsilon)}{C}    \\
+		0 & \frac{\Sigma_0\Sigma_H \cos\varepsilon}{C} & \Sigma_P + \frac{\Sigma_H^2\sin^2\varepsilon}{C} \\
+	\end{pmatrix}
+\end{equation}
+\section{Boundary Conditions}
+% TODO: Talk about why the high latitude is important
+The use case of this model is to act as a boundary condition for a global MHD model. The field aligned currents entering the ionosphere are approximately perpendicular to the ionosphere in the high latitude limit. Due to this, the field aligned currents primarily enter the ionosphere in this region. The accuracy of the high latitude region is therefore paramount to the accuracy of the ionosphere-magnetosphere coupling. \\
+
+% TODO: Talk about the coordinate degeneration at the pole
+Considering that the equation is being solved on a spherical surface, a coordinate singularity occurs at the poles of the grid. At $\theta =0$ in spherical coordinates, the $\phi$ coordinate degenerates into multiple grid points representing a single point. To maintain a continuous potential in the final solution, it is important to evaluate the poles in a way that ensures continuity over the pole when approaching from any of the latitude lines.\\
+
+% TODO: Talk about the 1/sin term.
+
+
+\subsection{Polar Divergence Theorem}
+Taking the integral of Equation \ref{eqn:continuity_eqn} over an area of radius $\Delta \theta/2$ surrounding the pole provides the following equation which can be converted to a line integral using the 2D divergence theorem.
+\begin{align}
+	\iint _{\mathcal{C}} j_R(R_e) dA & =\iint_{\mathcal{C}}  \left[\nabla_\perp\cdot (\Sigma\cdot \nabla \psi)_\perp\right]dA  = B \\
+	                                 & \implies	 J_{cap}=
+	\oint_{\partial\mathcal{C}}\left[(\Sigma\cdot \nabla \psi)_\perp\right]dA
+\end{align}
+Where $\mathcal{C}$ is the surface area of the sphere with a radius $\Delta \theta /2$ around the respective pole and $J_{\rm cap}$ is the total radial current density integrated over the area of $\mathcal C$. By evaluating the inner $\Sigma \cdot \nabla \psi$ expression with the conductivity tensor in spherical coordinates and simplifying, we arrive at.
+
+\begin{equation}
+	J_{\rm cap} = \int_{0}^{2\pi}\left[\sin\theta_0\cdot
+		\frac{\partial \psi}{\partial \theta}(\theta_0, \phi)\cdot
+		\Sigma_{\theta\theta} (\theta_0,\phi)+
+		\frac{\partial\psi}{\partial\phi}(\theta_0,\phi)\cdot
+		\Sigma_{\theta\phi}(\theta_0,\phi)
+		\right] d\phi
+\end{equation}
+Considering that these derivitives are evaluated at positions with $\theta=\Delta\theta/2$, the derivative terms can be discretized as follows:
+\begin{align*}
+	\frac{\partial \psi}{\partial \theta}(\theta_0, \phi)                &
+	\approx \frac{\psi_{\rm pole} - \psi(\theta_0, \phi)}{\Delta \theta} &
+	\frac{\partial \psi}{\partial \phi}(\theta_0, \phi)                  &
+	\approx \frac{\psi(\theta_0, \phi-1) - \psi(\theta_0, \phi+1)}{\Delta \theta}
+\end{align*}
+These give approximations for the derivative terms. An additional level of discretization can be applied onto the integral terms to arrive at a linear expression.
+\begin{align*}
+	J_{\rm cap}
+\end{align*}
+
+
+
+\begin{figure}[htbp]
+	\centering
+	\includestandalone{CapBC1}
+	\caption{Standard five-point stencil on the spherical grid.}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centering
+	\includestandalone{CapBC2}
+	\caption{Standard five-point stencil on the spherical grid.}
+\end{figure}
+
+
+\begin{figure}[htbp]
+	\centering
+	\includestandalone{CrossPoleBC1}
+	\caption{Standard five-point stencil on the spherical grid.}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centering
+	\includestandalone{CrossPoleBC2}
+	\caption{Standard five-point stencil on the spherical grid.}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centering
+	\includestandalone{CrossPoleBC3}
+	\caption{Standard five-point stencil on the spherical grid.}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centering
+	\includestandalone{LowLatGrid}
+	\caption{Standard five-point stencil on the spherical grid.}
+\end{figure}
+
+
+\end{document}
+
+

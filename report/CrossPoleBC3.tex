@@ -1,0 +1,152 @@
+\documentclass[border=10pt]{standalone}
+\usepackage{tikz}
+\usepackage{amsmath}
+
+\definecolor{polecol}{RGB}{204,51,51}
+\definecolor{gridcol}{RGB}{50,50,80}
+\definecolor{ringcol}{RGB}{140,140,160}
+\definecolor{annotcol}{RGB}{80,80,80}
+\definecolor{stencilA}{RGB}{0,150,130}
+
+\begin{document}
+
+
+\begin{tikzpicture}[>=latex]
+
+
+	% --- Parameters ---
+	\def\dtheta{2.0}
+	\def\Nlon{8}
+	\def\maxR{4.0}         % 2 * dtheta
+
+	% =============================================
+	%  MAIN DIAGRAM
+	% =============================================
+
+	% --- Ghost ring ---
+	\draw[gridcol, thick, dashed] (0,0) circle ({\dtheta/2});
+
+	% --- Concentric colatitude rings ---
+	\draw[ringcol,thin] (0,0) circle ({2*\dtheta});
+
+	% --- Longitude lines ---
+	\foreach \j in {0,...,\the\numexpr\Nlon-1\relax} {
+			\pgfmathsetmacro{\angle}{\j * 360 / \Nlon}
+			\draw[thin, ringcol] (0,0) -- (\angle:\maxR + \dtheta / 2);
+		}
+
+	% --- Grid dots: ghost points ---
+	\foreach \j in {0,...,\the\numexpr\Nlon-1\relax} {
+			\pgfmathsetmacro{\angle}{\j * 360 / \Nlon}
+			\fill[ringcol] (\angle:{\dtheta/2}) circle (3pt);
+		}
+
+	% --- Grid dots: first ring
+	\foreach \j in {0,...,\the\numexpr\Nlon-1\relax} {
+			\pgfmathsetmacro{\angle}{\j * 360 / \Nlon}
+			\fill[gridcol] (\angle:{2*\dtheta}) circle (3pt);
+		}
+
+
+
+	% --- Pole point (on top of everything) ---
+	\fill[polecol] (0,0) circle (3pt);
+
+	% =============================================
+	%  RADIUS LABELS (above horizontal line)
+	% =============================================
+	\node[anchor=south west, font=\large, annotcol, inner sep=2pt]
+	at ({\dtheta/2}, 0.2) {$\epsilon$};
+	\node[anchor=south west,  font=\large, annotcol, inner sep=2pt]
+	at ({2*\dtheta}, 0.2) {$\Delta\theta$};
+
+
+	% =============================================
+	%  LONGITUDE SPACING (arc at outer edge)
+	% =============================================
+
+	\draw[thick, <->, annotcol]
+	(90:{\maxR + 0.4}) arc (90:{90 + 360/\Nlon}:{\maxR + 0.4})
+	node[midway, above, font=\small] {$\Delta\phi$};
+
+	% =============================================
+	%  
+	% =============================================	
+	\draw[stencilA, ultra thick] (90:{2*\dtheta}) circle (6pt);
+	\draw[stencilA, ultra thick] (45:{2*\dtheta}) circle (6pt);
+	\draw[stencilA, ultra thick] (135:{2*\dtheta}) circle (6pt);
+	\draw[stencilA, ultra thick] (90:{\dtheta/2}) circle (6pt);
+	\draw[stencilA, ultra thick] (90:{2*\dtheta + 1.5}) circle (6pt);
+	\fill[ringcol] (90:{2*\dtheta+1.5}) circle (3pt);
+
+
+	\draw[stencilA, ultra thick,  shorten <=5.5pt, shorten >=5.5pt] (90:{2*\dtheta}) to[bend right=15] (45:{2*\dtheta});
+	\draw[stencilA, ultra thick,  shorten <=5.5pt, shorten >=5.5pt] (90:{2*\dtheta}) to[bend left=15] (135:{2*\dtheta});
+
+	\draw[stencilA, ultra thick, shorten <=5.5pt, shorten >=5.5pt] (90:{2*\dtheta}) to[bend right=20] (90:{2*\dtheta + 1.5});
+
+	\draw[stencilA, ultra thick, shorten <=5.5pt, shorten >=5.5pt] (90:{2*\dtheta}) to[bend left=20] (90:{\dtheta/2});
+
+	% =============================================
+	%  STENCIL 2: Inner ring point at 180° (left)
+	% =============================================
+	% Circle the target point
+	\draw[stencilB, ultra thick] (180:{\dtheta/2}) circle (6pt);
+	\draw[stencilB, ultra thick] (135:{\dtheta/2}) circle (6pt);
+	\draw[stencilB, ultra thick] (225:{\dtheta/2}) circle (6pt);
+	\draw[stencilB, ultra thick] (180:{2*\dtheta}) circle (6pt);
+	\draw[stencilB, ultra thick] (180:{-2*\dtheta }) circle (6pt);
+
+	% Phi neighbors on epsilon ring
+	\draw[stencilB, ultra thick, shorten <=5.5pt, shorten >=5.5pt] (180:{\dtheta/2}) to[bend right=25] (135:{\dtheta/2});
+	\draw[stencilB, ultra thick, shorten <=5.5pt, shorten >=5.5pt] (180:{\dtheta/2}) to[bend left=25] (225:{\dtheta/2});
+
+	% Outward to orange point at same longitude
+	\draw[stencilB, ultra thick, shorten <=5.5pt, shorten >=5.5pt] (180:{\dtheta/2}) to[bend left=20] (180:{2*\dtheta});
+
+	\draw[stencilB, ultra thick, shorten <=5.5pt, shorten >=5.5pt] (180:{\dtheta/2}) to[bend right=20] (0:{2*\dtheta});
+	% ==================================
+	%  LEGEND (to the right)
+	% =============================================
+
+	\begin{scope}[shift={(\maxR + 2.8, 2.725)}]
+		\node[anchor=north, font=\large\bfseries, annotcol] at (1.9, -0.2) {Legend};
+
+		% Pole node
+		\fill[polecol] (0.35, -1.2) circle (3pt);
+		\node[anchor=west, font=\large, annotcol] at (0.5, -1.2)
+		{Pole node};
+
+		% Grid nodes
+		\fill[gridcol] (0.35, -1.85) circle (3pt);
+		\node[anchor=west, font=\large, annotcol] at (0.5, -1.85)
+		{Grid nodes};
+
+		% Colatitude ring
+		\draw[ringcol, thick] (0.2, -2.45) -- (0.5, -2.45);
+		\node[anchor=west, font=\large, annotcol] at (0.5, -2.45)
+		{Grid};
+
+		\fill[ringcol] (0.35, -3.1) circle (3pt);
+		\node[anchor=west, font=\large, annotcol] at (0.5, -3.1)
+		{Polar ghost nodes};
+
+		\draw[gridcol, thick, dashed] (0.2, -3.75) -- (0.5, -3.75);
+		\node[anchor=west, font=\large, annotcol] at (0.5, -3.75)
+		{Polar ghost ring};
+
+		\draw[stencilA, ultra thick] (0.2, -4.4) -- (0.5, -4.4);
+		\node[anchor=west, font=\large, annotcol] at (0.5, -4.4)
+		{Standard Stencil};
+
+		\draw[stencilB, ultra thick] (0.2, -5.05) -- (0.5, -5.05);
+		\node[anchor=west, font=\large, annotcol] at (0.5, -5.05)
+		{Pole stencil};
+
+		% Bounding box
+		\draw[annotcol!40, rounded corners=3pt]
+		(0, 0) rectangle (4.1, -5.45);
+	\end{scope}
+
+\end{tikzpicture}
+\end{document}

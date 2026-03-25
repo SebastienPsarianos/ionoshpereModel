@@ -56,9 +56,22 @@ void MHDInterpolation::processLegacyOutput(
                         "File structure incorrect for JR input data");
                 }
             }
+            // Skip the duplicate phi=2π endpoint at the end of each row
+            { double t, p, s; jrData >> t >> p >> s; }
         }
         dTh = thVals[1] - thVals[0];
         dPh = phVals[nTh] - phVals[0];
+
+        // The MHD output is in a midnight-anchored magnetic frame (phi=0 =
+        // magnetic midnight). Rotate into the centered-dipole frame used by
+        // the solver: phi_CD = phi_data + phi_subsolar_CD + pi (mod 2pi).
+        auto subSolarMagSph = dipoleModel->geoCentricToDipole(
+            toGeoSph(solarModel->computeSubSolar()));
+        double phiOffset =
+            std::fmod(subSolarMagSph.phi + M_PI, 2.0 * M_PI);
+        for (long long i = 0; i < static_cast<long long>(nTh * nPh); i++) {
+            phVals[i] = std::fmod(phVals[i] + phiOffset, 2.0 * M_PI);
+        }
     }
 
     auto coordVector = rcp(new Ionosphere::MultiVector(map, 2));
@@ -90,6 +103,9 @@ void MHDInterpolation::getGridSize(
             if (std::sscanf(line.c_str(), "nTh: %d, nPh: %d", nTh, nPh) != 2) {
                 throw std::runtime_error("Failed to parse grid dimensions");
             }
+            // The file includes a duplicate phi=2π endpoint per row; report
+            // the unique count
+            *nPh -= 1;
         }
 
         std::cout << *nTh << " " << *nPh << std::endl;
