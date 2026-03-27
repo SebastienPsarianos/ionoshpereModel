@@ -1,0 +1,26 @@
+ionosphere:
+  conductance:
+    sig0: 1000.0
+    year: 2026
+    month: 3
+    day: 20
+    hour: 12.0
+    kp: 1
+    f107: 120.0
+  io:
+    input: data/sim_input.txt
+    output: data/solvedSystem.dat
+  equation:
+    earth_radius_m: 6378000.0
+    ionosphere_altitude_m: 400000.0
+    boundarycondition: PoleDivThm
+    equation: OAmm
+  solver:
+    preconditioner:
+      type: ILUT
+      ilut_level_of_fill: 2.0
+      drop_tolerance: 0.0001
+    belos:
+      max_iterations: 5000
+      convergence_tolerance: 1.0e-06
+      output_frequency: 100
