@@ -1,0 +1,38 @@
+% ============================================================
+% COLORS
+% ============================================================
+\definecolor{capfill}{RGB}{200,225,240}
+\definecolor{capedge}{RGB}{70,130,180}
+\definecolor{polecol}{RGB}{204,51,51}
+\definecolor{adjcol}{RGB}{230,120,50}
+\definecolor{gridcol}{RGB}{50,50,80}
+\definecolor{ringcol}{RGB}{140,140,160}
+\definecolor{loncol}{RGB}{170,170,190}
+\definecolor{annotcol}{RGB}{80,80,80}
+\definecolor{stencilA}{RGB}{0,150,130}
+\definecolor{stencilB}{RGB}{130,50,180}
+
+% ============================================================
+% CUSTOM COMMANDS
+% ============================================================
+\newcommand{\sigp}{\Sigma_P}
+\newcommand{\sigh}{\Sigma_H}
+\newcommand{\sigz}{\Sigma_0}
+
+\newcommand{\jR}{j_R}
+\newcommand{\RE}{R_E}
+
+\newcommand{\C}{\mathcal{C}}
+\newcommand{\parC}{\partial\mathcal{C}}
+
+\newcommand{\placeholder}[2][0.9]{%
+	\begin{center}
+		\fcolorbox{black}{gray!20}{%
+			\parbox{#1\textwidth}{%
+				\centering\vspace{1.5cm}
+				\textit{#2}
+				\vspace{1.5cm}
+			}%
+		}
+	\end{center}
+}

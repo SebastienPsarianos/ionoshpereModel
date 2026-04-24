@@ -1,12 +1,7 @@
 \documentclass[border=10pt]{standalone}
 \usepackage{tikz}
 \usepackage{amsmath}
-
-\definecolor{polecol}{RGB}{204,51,51}
-\definecolor{gridcol}{RGB}{50,50,80}
-\definecolor{ringcol}{RGB}{140,140,160}
-\definecolor{annotcol}{RGB}{80,80,80}
-\definecolor{stencilA}{RGB}{0,150,130}
+\IfFileExists{../macros.tex}{\input{../macros}}{\input{macros}}
 
 \begin{document}
 \begin{tikzpicture}[>=latex]
@@ -21,9 +16,6 @@
 	%  MAIN DIAGRAM
 	% =============================================
 
-	% --- Shaded pole cap ---
-	\fill[capfill] (0,0) circle ({\dtheta/2});
-	\draw[ultra thick, capedge] (0,0) circle ({\dtheta/2});
 
 	% --- Concentric colatitude rings ---
 	\draw[ringcol,thick] (0,0) circle ({\dtheta});
@@ -33,12 +25,6 @@
 	\foreach \j in {0,...,\the\numexpr\Nlon-1\relax} {
 			\pgfmathsetmacro{\angle}{\j * 360 / \Nlon}
 			\draw[thick, ringcol] (0,0) -- (\angle:\maxR + \dtheta / 2);
-		}
-
-	% --- Grid dots: cap boundary ---
-	\foreach \j in {0,...,\the\numexpr\Nlon-1\relax} {
-			\pgfmathsetmacro{\angle}{\j * 360 / \Nlon}
-			\fill[capedge] (\angle:{\dtheta/2}) circle (3pt);
 		}
 
 	% --- Grid dots: first ring
@@ -59,8 +45,6 @@
 	% =============================================
 	%  RADIUS LABELS (above horizontal line)
 	% =============================================
-	\node[anchor=south west, font=\large, annotcol, inner sep=2pt]
-	at ({\dtheta/2}, 0) {$\tfrac{\Delta\theta}{2}$};
 	\node[anchor=south west,  font=\large, annotcol, inner sep=2pt]
 	at ({\dtheta}, 0.1) {$\Delta\theta$};
 	\node[anchor=south west, font=\large, annotcol, inner sep=2pt]
@@ -79,7 +63,7 @@
 	%  LEGEND (to the right)
 	% =============================================
 
-	\begin{scope}[shift={(\maxR + 2.8, 1.9)}]
+	\begin{scope}[shift={(\maxR + 2.8, 1.625)}]
 
 		\node[anchor=north, font=\small\bfseries, annotcol] at (1.9, -0.2) {Legend};
 
@@ -98,21 +82,14 @@
 		\node[anchor=west, font=\footnotesize, annotcol] at (0.5, -2.3)
 		{Grid nodes};
 
-		% Cap region
-		\fill[capfill] (0.2, -2.7) rectangle (0.5, -3);
-		\draw[capedge, thick] (0.2, -2.7) rectangle (0.5, -3);
-		\node[anchor=west, font=\footnotesize, annotcol] at (0.5, -2.85)
-		{Pole cap ($\theta < \Delta\theta/2$)};
-
 		% Colatitude ring
-		\draw[ringcol, thick] (0.2, -3.4) -- (0.5, -3.4);
-		\node[anchor=west, font=\footnotesize, annotcol] at (0.5, -3.4)
+		\draw[ringcol, thick] (0.2, -2.85) -- (0.5, -2.85);
+		\node[anchor=west, font=\footnotesize, annotcol] at (0.5, -2.85)
 		{Grid};
-
 
 		% Bounding box
 		\draw[annotcol!40, rounded corners=3pt]
-		(0, 0) rectangle (3.8, -3.8);
+		(0, 0) rectangle (3.8, -3.25);
 
 	\end{scope}
 

@@ -1,0 +1,81 @@
+\documentclass{ut-thesis-custom}
+
+% ============================================================
+% METADATA (ut-thesis preamble commands)
+% ============================================================
+\author{Sebastien Psarianos}
+\title{A 2D Ionospheric Shell Model as a Boundary Condition
+       for a Global MHD Space Weather Simulation}
+\degree{Bachelor of Science}
+\department{Physics}
+\gradyear{\the\year}
+
+% ============================================================
+% PACKAGES
+% ============================================================
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[numbers]{natbib}
+\usepackage[colorlinks=true,
+            linkcolor=black,
+            citecolor=black,
+            urlcolor=blue,
+            pdftitle={A 2D Ionospheric Shell Model as a Boundary Condition
+                      for a Global MHD Space Weather Simulation},
+            pdfauthor={Sebastien Psarianos}]{hyperref}
+\usepackage{cleveref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{physics}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{standalone}
+\usepackage{bm}
+\usetikzlibrary{positioning, arrows.meta, fit, backgrounds, calc}
+\usepackage{parskip}
+
+\input{macros}
+
+\setcounter{tocdepth}{2}
+\begin{document}
+\frontmatter
+\maketitle
+\begin{abstract}
+
+	Accurate modeling of space weather is integral to the security of infrastructure both on the ground and in orbit. Historic damage caused by geomagnetic storms has been assessed as likely avoidable with modern operational space weather modeling~\cite{economic_eastwood_2017}, of which accurate modeling of the magnetosphere-ionosphere coupled system is a key component. Ionospheric modeling relies on empirical values for the ionospheric conductivity that continue to evolve~\citep{cousins2015, moen1993, hardy1987}. This thesis establishes an expandable framework for magnetohydrodynamics coupling problems that is built with interchangeable physical models in mind to account for the evolving landscape of empirical models. The model described in this thesis is a 2D spherical-shell ionosphere model solving the~\citet{goodman1995} ionospheric surface equation with the~\citet{amm1996} conductivity tensor. The ionosphere code presented provides empirical conductivity models for the auroral and extreme ultraviolet-driven conductivities in a modular framework supporting expansion. The ionospheric surface equation is discretized, with a divergence theorem boundary condition that preserves pole continuity as a built-in constraint. The solve time of the model was improved from approximately 140 to 10 seconds on a $512\times256$ grid, achieved with a MueLu-preconditioned GMRES solver optimized using a parameter sweep study. Model output shows behaviour consistent with the two-cell pattern of ionosphere potentials for a southward IMF~\cite{kelley2009}. This model provides a framework for MHD coupling problems that is agnostic to the individual physical models it comprises.
+\end{abstract}
+
+\begin{acknowledgements}
+	I would like to thank Dr. Groth for the opportunity to contribute to this project. I am grateful for the guidance he provided as I learned more about this field, and the help working through the harder problems.
+\end{acknowledgements}
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+% ------------------------------------------------------------
+% MAIN MATTER
+% ------------------------------------------------------------
+\mainmatter
+
+\include{chapters/introduction}
+\include{chapters/conductivity}
+\include{chapters/implementation}
+\include{chapters/results}
+\include{chapters/conclusions}
+
+\appendix
+\include{chapters/appendix}
+% ============================================================
+% REFERENCES
+% ============================================================
+\addcontentsline{toc}{chapter}{Bibliography}
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+
+\end{document}

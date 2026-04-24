@@ -1,12 +1,7 @@
 \documentclass[border=10pt]{standalone}
 \usepackage{tikz}
 \usepackage{amsmath}
-
-\definecolor{polecol}{RGB}{204,51,51}
-\definecolor{gridcol}{RGB}{50,50,80}
-\definecolor{ringcol}{RGB}{140,140,160}
-\definecolor{annotcol}{RGB}{80,80,80}
-\definecolor{stencilA}{RGB}{0,150,130}
+\IfFileExists{../macros.tex}{\input{../macros}}{\input{macros}}
 
 \begin{document}
 \begin{tikzpicture}[>=latex]
@@ -85,21 +80,23 @@
 	\pgfmathsetmacro{\yW}{\rCen * sin(\angW)}
 
 	% Circle stencil points
-	\draw[stencilA, ultra thick] (\xCen, \yCen) circle (6pt);
 	\draw[stencilA, ultra thick] (\xN, \yN) circle (6pt);
 	\draw[stencilA, ultra thick] (\xS, \yS) circle (6pt);
-	\draw[stencilA, ultra thick] (\xE, \yE) circle (6pt);
-	\draw[stencilA, ultra thick] (\xW, \yW) circle (6pt);
+	\draw[stencilB, ultra thick] (\xE, \yE) circle (6pt);
+	\draw[stencilB, ultra thick] (\xW, \yW) circle (6pt);
 
 	% Stencil arrows
 	\draw[stencilA, ultra thick, shorten <=5.5pt, shorten >=5.5pt]
-	(\xCen, \yCen) to[bend right=8] (\xN, \yN);
+	(\xCen, \yCen) to[bend left=20] (\xN, \yN);
 	\draw[stencilA, ultra thick, shorten <=5.5pt, shorten >=5.5pt]
-	(\xCen, \yCen) to[bend left=8] (\xS, \yS);
-	\draw[stencilA, ultra thick, shorten <=5.5pt, shorten >=5.5pt]
-	(\xCen, \yCen) to[bend right=8] (\xE, \yE);
-	\draw[stencilA, ultra thick, shorten <=5.5pt, shorten >=5.5pt]
-	(\xCen, \yCen) to[bend left=8] (\xW, \yW);
+	(\xCen, \yCen) to[bend right=20] (\xS, \yS);
+	\draw[stencilB, ultra thick, shorten <=5.5pt, shorten >=5.5pt]
+	(\xCen, \yCen) to[bend left=20] (\xE, \yE);
+	\draw[stencilB, ultra thick, shorten <=5.5pt, shorten >=5.5pt]
+	(\xCen, \yCen) to[bend right=20] (\xW, \yW);
+
+
+	\draw[annotcol, ultra thick] (\xCen, \yCen) circle (6pt);
 
 	% =============================================
 	%  DISTANCE ANNOTATIONS
@@ -135,7 +132,7 @@
 	% Plus title row: total ~2.1, center around y = yCen
 	\pgfmathsetmacro{\legX}{\gridRightX + 1.8}
 
-	\begin{scope}[shift={(\legX, \yCen + 1.45)}]
+	\begin{scope}[shift={(\legX, \yCen + 2.1)}]
 
 		% Title
 		\node[anchor=north, font=\large\bfseries, annotcol] at (1.9, -0.2) {Legend};
@@ -153,11 +150,19 @@
 		% Standard Stencil
 		\draw[stencilA, ultra thick] (0.2, -2.5) -- (0.5, -2.5);
 		\node[anchor=west, font=\large, annotcol] at (0.55, -2.5)
-		{Standard stencil};
+		{$\theta$ Discretization};
+
+		\draw[stencilB, ultra thick] (0.2, -3.15) -- (0.5, -3.15);
+		\node[anchor=west, font=\large, annotcol] at (0.55, -3.15)
+		{$\phi$ Discretization};
+
+		\draw[annotcol, ultra thick] (0.35, -3.775) circle (4pt);
+		\node[anchor=west, font=\large, annotcol] at (0.55, -3.8)
+		{Central point};
 
 		% Bounding box with 0.2 margins
 		\draw[anchor=west,annotcol!40, rounded corners=3pt]
-		(0, 0) rectangle (3.8, -2.9);
+		(0, 0) rectangle (3.8, -4.2);
 	\end{scope}
 
 \end{tikzpicture}

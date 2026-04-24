@@ -1,15 +1,9 @@
 \documentclass[border=10pt]{standalone}
 \usepackage{tikz}
 \usepackage{amsmath}
-
-\definecolor{polecol}{RGB}{204,51,51}
-\definecolor{gridcol}{RGB}{50,50,80}
-\definecolor{ringcol}{RGB}{140,140,160}
-\definecolor{annotcol}{RGB}{80,80,80}
-\definecolor{stencilA}{RGB}{0,150,130}
+\IfFileExists{../macros.tex}{\input{../macros}}{\input{macros}}
 
 \begin{document}
-
 
 \begin{tikzpicture}[>=latex]
 
@@ -70,8 +64,8 @@
 	node[midway, above, font=\small] {$\Delta\phi$};
 
 	% =============================================
-	%  
-	% =============================================	
+	%
+	% =============================================
 	\draw[stencilA, ultra thick] (90:{2*\dtheta}) circle (6pt);
 	\draw[stencilA, ultra thick] (45:{2*\dtheta}) circle (6pt);
 	\draw[stencilA, ultra thick] (135:{2*\dtheta}) circle (6pt);

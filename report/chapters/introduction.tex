@@ -1,0 +1,84 @@
+\chapter{Introduction}
+\label{chap:introduction}
+Accurate space weather modelling is essential to protecting critical technological infrastructure on Earth and in orbit. In March 1989, the largest geomagnetic storm of the space age, caused by two coronal mass ejections, initiated a widespread power outage in the Hydro-Quebec power grid \citep{21st_boteler_2019}. Estimates for the economic cost of such a blackout range from billions of dollars to trillions on the extreme end~\citep{economic_eastwood_2017}. Historical events such as a 2003 blackout in Sweden have been assessed as being likely avoidable with modern operational space weather modeling~\citep{economic_eastwood_2017}, showing the value of continued advancement in modeling accuracy.
+
+Ionospheric current systems, driven by the magnetosphere, can induce rapidly varying magnetic fields on the surface of the Earth that in turn drive geomagnetically induced currents (GICs)~\citep{scientific_eastwood_2017}. These GICs can cause blackouts and destroy infrastructure on the ground. Therefore, modeling of the magnetosphere-ionosphere coupling is a key piece in mitigating the effects of geomagnetic activity.
+
+The Earth's magnetosphere is strongly coupled to the ionosphere, which closes the field-aligned currents in the magnetosphere. The ionosphere acts like a load in the global magnetospheric circuit, dissipating the energy produced by field-aligned currents originating in the magnetosphere~\citep{impacts_liu_2023}. The modeling of the magnetospheric system is largely dependent on empirical models for the ionospheric conductivity that are frequently updated to improve accuracy~\citep{moen1993, goodman1995, cousins2015}. This thesis presents an ionosphere model built with modularity and extensibility as a design factor, allowing for space weather forecasting across a wide-selection of physical models.
+
+The remainder of the thesis is organized as follows. Chapter 2 describes the empirical and physical models used to compute ionospheric conductivity. Chapter 3 shows the numerical implementation of the~\citet{goodman1995} ionosphere shell approximation, and expands on problematic polar behaviour and solver performance. Chapter 4 presents resulting potential distributions from the model with a southward IMF produced by the magnetosphere model described in~\citet{global_groth_2000}. Chapter 5 concludes with the future extensions planned for this application and further optimizations.
+
+\section{Height Integrated Conductivities}
+\label{sec:height_integrated_conductivities}
+To understand the role that the Earth plays in completing the magnetosphere's field-aligned currents, it is important to accurately understand how the conductivity of the ionosphere dissipates the energy generated in the magnetosphere. Ohm's law is used in~\citet{goodman1995} to derive the equation used to complete the field-aligned currents and the conductivity tensor $\bm\sigma$ acts as the dissipative term that provides the load.
+\begin{equation}
+	\bm j = \bm\sigma\cdot \nabla\psi
+	\label{eq:ohms_law}
+\end{equation}
+For ionospheric physics, the conductivity tensor is primarily represented as consisting of the Hall, Pedersen and parallel conductivities. These conductivities can be defined using the following tensor representation where $\bm B$ is taken to be parallel to the $z$-axis~\citep{kelley2009}:
+\begin{equation*}
+	\bm\sigma = \begin{pmatrix}
+		\sigma_P & -\sigma_H & 0        \\
+		\sigma_H & \sigma_P  & 0        \\
+		0        & 0         & \sigma_0
+	\end{pmatrix}
+\end{equation*}
+These conductivities can also be derived from physical plasma parameters, as shown in this example from~\citep{kelley2009}.
+\begin{equation}
+	\begin{aligned}
+		\sigma_{P} & =ne\left[\frac{b_i}{1+\kappa_i^2}+\frac{b_e}{1+\kappa_e^2}\right]                    \\
+		\sigma_{H} & =(ne/B) \left[\frac{\kappa_e^2}{1+\kappa_e^2}+\frac{\kappa_i^2}{1+\kappa_i^2}\right] \\
+		\sigma_{0} & = ne(b_i-b_e)
+		\label{eq:physical_conduct}
+	\end{aligned}
+\end{equation}
+Where $n$ is the plasma number density, $e$ is the elementary charge, $B$ is the magnetic field magnitude, $b_i, b_e$ are the ion and electron mobilities and $\kappa_i,\kappa_e$ are the magnetization parameters. This shows a linear relationship between the density of charged particles in the ionosphere and its associated conductivity.
+
+The height integrated conductivities are calculated by integrating the conductivity of each of these terms through the height of the ionosphere as follows~\citep{goodman1995}:
+\begin{equation*}
+	\Sigma_i = \int_{r_1}^{r_2} \bm\sigma \dd{R}
+\end{equation*}
+These height integrated conductivities are used in the ionospheric surface equation that is described in the next section. In order to use these conductivities on a spherical coordinate system, the Hall, Pedersen and parallel bases must be converted to be used in a spherical coordinate system. Since the direction these conductances correspond to is dependent on the magnetic field direction, \citet{amm1996} uses a dipole approximation of the Earth's magnetic field to describe the following tensor:
+\begin{equation}
+	\Sigma_{Amm} = \begin{pmatrix}
+		0 & 0                      & 0                   \\
+		0 & \Sigma_{\theta \theta} & \Sigma_{\theta\phi} \\
+		0 & \Sigma_{\phi \theta}   & \Sigma_{\phi\phi}   \\
+	\end{pmatrix} =
+	\begin{pmatrix}
+		0 & 0                                          & 0                                                \\
+		0 & \frac{\Sigma_0\Sigma_P}{C}                 & \frac{\Sigma_0\Sigma_H (-\cos\varepsilon)}{C}    \\
+		0 & \frac{\Sigma_0\Sigma_H \cos\varepsilon}{C} & \Sigma_P + \frac{\Sigma_H^2\sin^2\varepsilon}{C} \\
+	\end{pmatrix}
+	\label{eq:conductivity_tensor}
+\end{equation}
+This provides a conductivity tensor that allows for computation to be performed in spherical coordinates. Here $C$ and $\sin\varepsilon, \cos\varepsilon$ are defined:
+\begin{align*}
+	C                = \Sigma_0\cos^2\varepsilon + \Sigma_P \sin^2\varepsilon \\
+	\cos\varepsilon  = - \frac{2\cos\theta}{\sqrt{1+3\cos^2\theta}}           \\
+	\sin\varepsilon  =  \frac{\sin\theta}{\sqrt{1+3\cos^2\theta}}
+\end{align*}
+The Hall and Pedersen conductivities are readily available through empirical models. The practical implementation of the conductivity in the simulation is described in detail in Chapter~\ref{chap:conductivity}.
+\section{The Ionosphere Surface Equation}
+This ionospheric model provides a boundary condition for a global magnetospheric MHD model through a 2D shell representing the magnetosphere-ionosphere boundary.~\citet{goodman1995} derives an expression for the potential on the surface of the magnetosphere-ionosphere boundary layer using a combination of the radial current divergence and Ohm's law (Equation~\ref{eq:ohms_law}) that is displayed here:
+\begin{equation}
+	\nabla \cdot \bm j = \frac1{R^2}\pdv{R^2j_R}{R} + \nabla_\perp \cdot(\bm\sigma\cdot \nabla\psi)_\perp
+	\label{eq:radcurr_divergence}
+\end{equation}
+By integrating Equation~\ref{eq:radcurr_divergence} through an altitude range $r_1 < R < r_2$ representative of the ionosphere region, Goodman arrives at the following expression for the ionospheric current system on the magnetosphere-ionosphere boundary.
+\begin{equation}
+	j_R(R_E) = \left[\nabla_\perp \cdot (\Sigma \cdot \nabla\psi)_\perp\right]
+	\label{eqn:continuity_eqn}
+\end{equation}
+Where $R_E$ is the radius of the Earth; $j_R$ is the component of the current density that is radial to the surface of the ionosphere; $\Sigma$ is the height integrated conductivity tensor described in Section~\ref{sec:height_integrated_conductivities} and $\psi$ is the potential along the ionosphere. Here simplifying assumptions are made, see~\citep{goodman1995} for the full derivation. Equation~\ref{eqn:continuity_eqn} provides an expression that relates the field-aligned currents as a source term to the ionospheric potential. This equation is used to model the interactions of the field-aligned currents with the ionospheric region.
+\section{Design Philosophy}
+Because strategies for modeling the various components of the ionosphere continue to evolve, the structure of this application was designed to remain agnostic to implementation details of any individual component. The application is built from the ground up with configurability and extensibility in mind. This is achieved primarily through the interfaces defined for various portions of the application such as boundary conditions, governing equations and conductivity models. These interfaces allow new models to be easily integrated into the system by simply implementing a common interface. Figure~\ref{diag:full_flow2} displays the structure of the application, showing these distinct sections of the application, interfacing through common interface layers.
+\begin{figure}[H]
+	\centering
+	\includestandalone[width=\textwidth]{diagrams/ApplicationFLow}
+	\caption{Application structure diagram displaying the data flow of the solver and conductivity model structure. Displays the distinct regions of the application and the global configuration provided by the YAML configuration.}
+	\label{diag:full_flow2}
+\end{figure}
+
+The application makes use of a YAML configuration throughout the application, allowing the application to be reconfigured on the fly. This opens up the possibility of cross-testing of different conductivity models, equations and simulation parameters without recompilation. A more comprehensive breakdown of the conductivity and solver portions of the application are given in Chapters~\ref{chap:conductivity} and~\ref{chap:implementation} respectively. The numerical backbone of the system is the Trilinos~\citep{TrilinosPaper} scientific computing framework along with the Tpetra~\citep{TpetraPaper} package. These packages provide the solvers and linear algebra utilities that are used throughout the simulation and provide the MPI utilities that allow for problem parallelization.
+

@@ -1,0 +1,121 @@
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage{amsmath}
+\usetikzlibrary{positioning, arrows.meta, calc}
+
+\begin{document}
+
+\begin{tikzpicture}[
+		>=Stealth,
+		% Standard composite box style (fixed size to ensure exact stacking)
+		compbox/.style 2 args={
+				rectangle, rounded corners, draw=#1!80!black, very thick,
+				fill=#1!5, minimum width=6.8cm, minimum height=2.8cm,
+				label={[anchor=south west, font=\sffamily\small\bfseries, xshift=8pt, yshift=0pt]north west:#2}
+			},
+		% Inner sub-boxes
+		subbox/.style={
+				rectangle, rounded corners, draw=black!70, thick,
+				fill=#1!20, minimum width=6.0cm, minimum height=0.9cm,
+				font=\sffamily\small, align=center
+			},
+		% Standard standalone blocks
+		stdbox/.style={
+				rectangle, rounded corners, draw=black!70, thick,
+				fill=#1!20, font=\sffamily\small, align=center
+			},
+		% Arrows
+		arrowdata/.style={->, thick, draw=black!80},
+		arrowparam/.style={->, densely dashed, thick, draw=black!60},
+		labarrow/.style={font=\scriptsize, fill=white, inner sep=2pt, align=center}
+	]
+
+	% ==========================================
+	% 1. MAIN VERTICAL STACK (X=0)
+	% ==========================================
+	% All central blocks strictly share minimum width=6.8cm and height=2.8cm
+
+	% Block 1: Helper Models (Y=0)
+	\node[compbox={violet}{Conductivity Helper Models}] (helper) at (0, 0) {};
+	\node[subbox=violet] (sunearth) at ([yshift=0.6cm]helper.center) {Sun-earth Position Model};
+	\node[subbox=violet] (igrf) at ([yshift=-0.6cm]helper.center) {IGRF Dipole Model};
+
+	% Block 2: Conductivity Model (Y=-4.0)
+	\node[compbox={cyan}{Conductivity Model}] (cond) at (0, -4.0) {};
+	\node[subbox=cyan] (auroral) at ([yshift=0.6cm]cond.center) {Auroral Conductivity};
+	\node[subbox=cyan] (euv) at ([yshift=-0.6cm]cond.center) {EUV Conductivity};
+
+	% Block 3: Factories (Y=-8.0)
+	\node[stdbox=orange, minimum width=6.8cm, minimum height=2.8cm, font=\sffamily\small\bfseries]
+	(factories) at (0, -8.0) {Problem \& Boundary Condition\\Factories};
+
+	% Block 4: Solver (Y=-12.0)
+	\node[compbox={red}{Solver}] (solver) at (0, -12.0) {};
+	\node[subbox=red] (belos) at ([yshift=0.6cm]solver.center) {Belos Solver};
+	\node[subbox=red] (prec) at ([yshift=-0.6cm]solver.center) {Preconditioner\\(MueLu / Ifpack)};
+
+
+	% ==========================================
+	% 2. EXTERNAL DATA SOURCES & COUPLING (LEFT, X=-7.8)
+	% ==========================================
+
+	% New Data Box 1: IGRF Coefficients (Aligned with Helper Models at Y=0)
+	\node[stdbox=gray, minimum width=2.5cm, minimum height=2.8cm]
+	(igrfcoef) at (-7.8, 0.0) {IGRF\\Coefficients};
+
+	% New Data Box 2: Hardy Fourier Coefficients (Aligned with Conductivity Model at Y=-4.0)
+	\node[stdbox=gray, minimum width=2.5cm, minimum height=2.8cm]
+	(hardycoef) at (-7.8, -4.0) {Hardy Fourier\\Coefficients};
+
+	% MHD Coupling (Aligned with Factories and Solver, centered at Y=-10.0)
+	\node[stdbox=green!70!black, minimum width=2.5cm, minimum height=6.8cm]
+	(inpr) at (-7.8, -10.0) {MHD\\Coupling\\(INPR)};
+
+
+	% ==========================================
+	% 3. YAML CONFIGURATION (RIGHT, X=7.8)
+	% ==========================================
+
+	\node[stdbox=gray, minimum width=2.5cm, minimum height=14.8cm]
+	(yaml) at (7.8, -6.0) {YAML\\Configuration};
+
+
+	% ==========================================
+	% 4. DATA FLOW ARROWS (SOLID)
+	% ==========================================
+
+	% Vertical pipeline
+	\draw[arrowdata] (helper.south) -- node[labarrow, right] {SZA, MLT} (cond.north);
+	\draw[arrowdata] (cond.south) -- node[labarrow, right] {conductance tensor $\Sigma$} (factories.north);
+	\draw[arrowdata] (factories.south) -- node[labarrow, right] {assembled problem\\$A, b, x_0$} (solver.north);
+
+	% Horizontal MHD Integration
+	\draw[arrowdata] (inpr.east |- factories.west) -- node[labarrow, above] {FAC source $j_R$} (factories.west);
+	\draw[arrowdata] (solver.west) -- node[labarrow, above] {potential $\psi$} (inpr.east |- solver.west);
+
+
+	% ==========================================
+	% 5. PARAMETER FLOW ARROWS (DASHED)
+	% ==========================================
+
+	% From Left Data Boxes into Sub-models
+	\draw[arrowparam] (igrfcoef.east |- igrf.west) -- node[labarrow, above] {dipole coefficients} (igrf.west);
+	\draw[arrowparam] (hardycoef.east |- auroral.west) -- node[labarrow, above] {Fourier coefficients} (auroral.west);
+
+	% From YAML into Helper sub-boxes
+	\draw[arrowparam] (yaml.west |- sunearth.east) -- node[labarrow, above] {date/time} (sunearth.east);
+	\draw[arrowparam] (yaml.west |- igrf.east) -- node[labarrow, above] {date/time} (igrf.east);
+
+	% From YAML into Conductivity sub-boxes
+	\draw[arrowparam] (yaml.west |- auroral.east) -- node[labarrow, above] {Kp} (auroral.east);
+	\draw[arrowparam] (yaml.west |- euv.east) -- node[labarrow, above] {F10.7} (euv.east);
+
+	% From YAML into Factories 
+	\draw[arrowparam] (yaml.west |- factories.east) -- node[labarrow, above] {configuration\\[-0.3ex]params} (factories.east);
+
+	% From YAML into Solver sub-boxes 
+	\draw[arrowparam] (yaml.west |- belos.east) -- node[labarrow, above] {solver params} (belos.east);
+	\draw[arrowparam] (yaml.west |- prec.east) -- node[labarrow, above] {preconditioner\\[-0.3ex]params} (prec.east);
+
+\end{tikzpicture}
+
+\end{document}

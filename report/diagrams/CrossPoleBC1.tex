@@ -1,12 +1,7 @@
 \documentclass[border=10pt]{standalone}
 \usepackage{tikz}
 \usepackage{amsmath}
-
-\definecolor{polecol}{RGB}{204,51,51}
-\definecolor{gridcol}{RGB}{50,50,80}
-\definecolor{ringcol}{RGB}{140,140,160}
-\definecolor{annotcol}{RGB}{80,80,80}
-\definecolor{stencilA}{RGB}{0,150,130}
+\IfFileExists{../macros.tex}{\input{../macros}}{\input{macros}}
 
 \begin{document}
 \begin{tikzpicture}[>=latex]
@@ -21,39 +16,30 @@
 	%  MAIN DIAGRAM
 	% =============================================
 
-
 	% --- Concentric colatitude rings ---
-	\draw[ringcol,thick] (0,0) circle ({\dtheta});
-	\draw[ringcol,thick] (0,0) circle ({2*\dtheta});
+	\draw[ringcol,thin] (0,0) circle ({2*\dtheta});
 
 	% --- Longitude lines ---
 	\foreach \j in {0,...,\the\numexpr\Nlon-1\relax} {
 			\pgfmathsetmacro{\angle}{\j * 360 / \Nlon}
-			\draw[thick, ringcol] (0,0) -- (\angle:\maxR + \dtheta / 2);
+			\draw[thin, ringcol] (0,0) -- (\angle:\maxR + \dtheta / 2);
 		}
 
 	% --- Grid dots: first ring
 	\foreach \j in {0,...,\the\numexpr\Nlon-1\relax} {
 			\pgfmathsetmacro{\angle}{\j * 360 / \Nlon}
-			\fill[adjcol] (\angle:{\dtheta}) circle (3pt);
+			\fill[gridcol] (\angle:{2*\dtheta}) circle (3pt);
 		}
 
-	% --- Grid dots: second ring ---
-	\foreach \j in {0,...,\the\numexpr\Nlon-1\relax} {
-			\pgfmathsetmacro{\angle}{\j * 360 / \Nlon}
-			\fill[gridcol] (\angle:{2*\dtheta}) circle (2pt);
-		}
 
 	% --- Pole point (on top of everything) ---
-	\fill[polecol] (0,0) circle (3.5pt);
+	\fill[polecol] (0,0) circle (3pt);
 
 	% =============================================
 	%  RADIUS LABELS (above horizontal line)
 	% =============================================
 	\node[anchor=south west,  font=\large, annotcol, inner sep=2pt]
-	at ({\dtheta}, 0.1) {$\Delta\theta$};
-	\node[anchor=south west, font=\large, annotcol, inner sep=2pt]
-	at ({2*\dtheta}, 0.1) {$2\Delta\theta$};
+	at ({2*\dtheta}, 0.1) {$\Delta\theta$};
 
 
 	% =============================================
@@ -68,34 +54,27 @@
 	%  LEGEND (to the right)
 	% =============================================
 
-	\begin{scope}[shift={(\maxR + 2.8, 1.625)}]
-
-		\node[anchor=north, font=\small\bfseries, annotcol] at (1.9, -0.2) {Legend};
+	\begin{scope}[shift={(\maxR + 2.8, 1.5)}]
+		\node[anchor=north, font=\large\bfseries, annotcol] at (1.9, -0.2) {Legend};
 
 		% Pole node
-		\fill[polecol] (0.35, -1.2) circle (3.5pt);
-		\node[anchor=west, font=\footnotesize, annotcol] at (0.5, -1.2)
+		\fill[polecol] (0.35, -1.2) circle (3pt);
+		\node[anchor=west, font=\large, annotcol] at (0.5, -1.2)
 		{Pole node};
 
-		% Adjacent nodes
-		\fill[adjcol] (0.35, -1.75) circle (3pt);
-		\node[anchor=west, font=\footnotesize, annotcol] at (0.5, -1.75)
-		{Adjacent nodes};
-
 		% Grid nodes
-		\fill[gridcol] (0.35, -2.3) circle (2pt);
-		\node[anchor=west, font=\footnotesize, annotcol] at (0.5, -2.3)
+		\fill[gridcol] (0.35, -1.85) circle (3pt);
+		\node[anchor=west, font=\large, annotcol] at (0.5, -1.85)
 		{Grid nodes};
 
 		% Colatitude ring
-		\draw[ringcol, thick] (0.2, -2.85) -- (0.5, -2.85);
-		\node[anchor=west, font=\footnotesize, annotcol] at (0.5, -2.85)
+		\draw[ringcol, thick] (0.2, -2.45) -- (0.5, -2.45);
+		\node[anchor=west, font=\large, annotcol] at (0.5, -2.45)
 		{Grid};
 
 		% Bounding box
 		\draw[annotcol!40, rounded corners=3pt]
-		(0, 0) rectangle (3.8, -3.25);
-
+		(0, 0) rectangle (3.8, -3);
 	\end{scope}
 
 \end{tikzpicture}
